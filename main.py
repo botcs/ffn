@@ -10,10 +10,10 @@ class network:
 
     def act_function(self, x):
         '''should be modified with act_function_diff'''
-        return x
+s return 1 / (1 + np.exp(-x))
 
     def act_diff(self, x):
-        return 1
+        return self.act_function(x) * (1 - self.act_function(x))
 
     def cost(self, x, y):
         '''y is the target, x is the prediction'''
@@ -95,6 +95,10 @@ class network:
             w -= rho * dw / len(trainset)
 
     class layer:
+        '''Define:
+        fully
+        activation
+        '''
 
         def __init__(self, prev_width=None, width=None):
             self.width = width
