@@ -33,6 +33,19 @@ class network(object):
             if e % (epoch / 5) == 1:
                 print self.output.get_crit(input, target)
 
+    def __str__(self):
+        res = 'Network layout:\n'
+        res += '-' * 30 + '\n'
+        res += '\tINPUT[{}]'.format(self.input.width)
+        curr = self.input
+        while curr is not None:
+            res += ('\n\t   |\n')
+            res += curr.__str__()
+            curr = curr.next_layer
+
+        res += '\n' + '-' * 30
+        return res
+
     def classification_validate(self, input_set, target_set):
         T = 0.0
         for input, target in zip(input_set, target_set):

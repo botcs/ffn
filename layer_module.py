@@ -49,6 +49,12 @@ class fully_connected(_layer):
         self.bias = np.random.rand(self.width)
         self.output = np.zeros([self.width, 1])
 
+    def __str__(self):
+        res = '[{} -> {}] fully_connected'.format(self.prev_layer.width,
+                                                  self.width)
+
+        return res
+
     def get_local_output(self, input):
         self.input = input
         'input will be required to train'
@@ -86,6 +92,12 @@ class output(_layer):
 
     def __init__(self, *args, **kwargs):
         _layer.__init__(self, *args, **kwargs)
+
+    def __str__(self):
+        res = '[{}->{}] OUTPUT: {}\n'.format(self.width, self.width, self.type)
+        res += '\t   |\n'
+        res += '[{}->{}] CRITERION: {}'.format(self.width, 1, self.type)
+        return res
 
     def new_last_layer(self, new_layer):
         self.prev_layer = new_layer
@@ -163,6 +175,12 @@ class activation(_layer):
             self.prev_layer = None
         else:
             self.width = self.prev_layer.width
+
+    def __str__(self):
+        res = '[{}->{}] activation: {}'.format(self.width,
+                                               self.width,
+                                               self.type)
+        return res
 
     def get_local_output(self, input):
         return self.act(input)

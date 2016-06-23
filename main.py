@@ -13,9 +13,11 @@ hot_label = np.zeros((train_label.size, train_label.max() + 1))
 hot_label[np.arange(train_label.size), train_label] = 1
 
 
-nn = nm.network(in_size=train_data.shape[1], criterion='softmax')
+nn = nm.network(in_size=train_data[0].size, criterion='softmax')
 nn.add_full(10)
 print 'Training...'
 nn.train(input_set=train_data[0:300],
          target_set=hot_label[0:300],
          epoch=1000, rate=0.01)
+
+print nn
