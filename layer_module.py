@@ -36,6 +36,9 @@ class _layer:
     def backprop_error(self, next_layer):
         pass
 
+    def train(self, rate):
+        pass
+
 
 class fully_connected(_layer):
 
@@ -47,6 +50,8 @@ class fully_connected(_layer):
         self.output = np.zeros([self.width, 1])
 
     def get_local_output(self, input):
+        self.input = input
+        'input will be required to train'
         return np.dot(self.input_weights, input) + self.bias
 
     def backprop_error(self, target):
@@ -59,6 +64,12 @@ class fully_connected(_layer):
         else:
             print('NO OUTPUT LAYER SPECIFIED')
         return np.dot(self.error, self.input_weights)
+
+    def train(self, rate):
+        '''GRADIENT DESCENT TRAINING'''
+        self.bias -= rate * self.error
+
+        self.input_weights -= rate * np.outer(self.error, self.input)
 
 
 class output(_layer):
@@ -75,6 +86,11 @@ class output(_layer):
 
     def __init__(self, *args, **kwargs):
         _layer.__init__(self, *args, **kwargs)
+
+    def new_last_layer(self, new_layer):
+        self.prev_layer = new_layer
+        self.prev_layer.next_layer = self
+        self.width = new_layer.width
 
     crit = {
         'MSE': lambda (prediction, target):
@@ -103,8 +119,8 @@ class output(_layer):
 
     'double paren for lambda wrap'
 
-    def get_crit(self, target):
-        return output.crit[self.type]((self.output, target))
+    def get_crit(self, input, target):
+        return output.crit[self.type]((self.get_output(input), target))
 
     def backprop_error(self, target):
         self.error = output.derivative[self.type]((self.output, target))
@@ -141,13 +157,11 @@ class activation(_layer):
         return activation.derivative_functions[self.type](x)
 
     def __init__(self, *args, **kwargs):
+        _layer.__init__(self, *args, **kwargs)
         if kwargs['type'] == 'input':
             self.type = 'identity'
             self.prev_layer = None
-            self.width = kwargs['width']
         else:
-            self.type = kwargs['type']
-            self.prev_layer = kwargs.get('prev_layer')
             self.width = self.prev_layer.width
 
     def get_local_output(self, input):
