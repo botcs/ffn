@@ -15,9 +15,14 @@ hot_label[np.arange(train_label.size), train_label] = 1
 
 nn = nm.network(in_size=train_data[0].size, criterion='softmax')
 nn.add_full(10)
-print 'Training...'
-nn.train(input_set=train_data[0:300],
-         target_set=hot_label[0:300],
+print 'Training network on MNIST...'
+nn.train(input_set=train_data[0:1000],
+         target_set=hot_label[0:1000],
          epoch=1000, rate=0.01)
+print 'Validating...'
+
+print 'Hit rate:{}%'.format(
+    100 * nn.classification_validate(train_data[10000:20000],
+                                     hot_label[10000:20000]))
 
 print nn
