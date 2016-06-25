@@ -19,7 +19,7 @@ nn.add_full(10)
 print 'Training network on MNIST...'
 nn.train(input_set=train_data,
          target_set=hot_label,
-         epoch=1000, rate=0.01,
+         epoch=100, rate=0.01,
          checkpoint='MNIST')
 
 

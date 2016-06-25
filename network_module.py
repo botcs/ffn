@@ -1,5 +1,36 @@
 import layer_module as lm
 import cPickle
+import sys
+
+
+class StatusBar:
+
+    def __init__(self, total, barLength=30):
+        self.total = total
+        self.curr = 0
+        self.percentage = 0
+        self.barLength = barLength
+
+    def barStr(self):
+        currBar = self.barLength * self.percentage / 100
+        return '[' + "=" * currBar + " " * (self.barLength - currBar) + ']'
+
+    def printBar(self, msg):
+        if(self.percentage <= 100):
+            print("\r  " + self.barStr() + " (" +
+                  str(self.curr) + '/' + str(self.total) + ")   " +
+                  str(100 * self.curr / self.total) +
+                  "%  {}   ".format(msg)),
+            sys.stdout.flush()
+            if(self.percentage == 100):
+                print '\n'
+
+    def update(self, msg):
+        self.curr += 1
+        currPercentage = self.curr * 100 / self.total
+        if(currPercentage > self.percentage):
+            self.percentage = currPercentage
+            self.printBar(msg)
 
 
 class network(object):
@@ -25,6 +56,7 @@ class network(object):
         self.output.new_last_layer(self.top_layer)
 
     def train(self, input_set, target_set, epoch, rate, **kwargs):
+        bar = StatusBar(epoch)
         cp_name = kwargs.get('checkpoint')
         for e in xrange(epoch):
             for input, target in zip(input_set, target_set):
@@ -36,17 +68,19 @@ class network(object):
                     curr = curr.prev_layer
                     curr.train(rate)
 
-            if (e + 1) % (epoch / 10) == 0:
-                crit = self.output.get_crit(input, target)
-                print ('ep. {} error: {}'.format(e + 1, crit))
+            bar.update(self.output.get_crit(input, target))
+
+            # if (e + 1) % (epoch / 10) == 0:
+            #     crit = self.output.get_crit(input, target)
+            #     print ('ep. {} error: {}'.format(e + 1, crit))
 
             if (e + 1) % (epoch / 2) == 0:
                 if cp_name:
                     file_name = str(cp_name)
-                    file_name += '-e{}-ID'.format(e + 1) + \
-                        str(id(self)) + '.dat'
+                    file_name += '-e{}-ID'.format(e + 1)
+                    file_name += str(id(self)) + '.dat'
                     self.save_state(file_name)
-                    print("Saved checkpoint to: '" + file_name + "'")
+                    # print("Saved checkpoint to: '" + file_name + "'")
 
     def save_state(self, file_name=None):
         if file_name:
