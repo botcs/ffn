@@ -59,19 +59,19 @@ class network(object):
         bar = StatusBar(epoch)
         cp_name = kwargs.get('checkpoint')
         for e in xrange(epoch):
+            crit = 0
             for input, target in zip(input_set, target_set):
-                self.output.get_output(input)
-                self.input.backprop_error(target)
+                crit += self.output.get_crit(input, target)
+                self.input.backprop_delta(target)
 
                 curr = self.output
                 while curr.prev_layer is not None:
                     curr = curr.prev_layer
                     curr.train(rate)
-
-            bar.update(self.output.get_crit(input, target))
+            crit /= len(input_set)
+            bar.update(crit)
 
             # if (e + 1) % (epoch / 10) == 0:
-            #     crit = self.output.get_crit(input, target)
             #     print ('ep. {} error: {}'.format(e + 1, crit))
 
             if (e + 1) % (epoch / 2) == 0:

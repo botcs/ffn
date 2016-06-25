@@ -33,7 +33,7 @@ class _layer:
         self.output = self.get_local_output(self.get_propagated_input(input))
         return self.output
 
-    def backprop_error(self, next_layer):
+    def backprop_delta(self, next_layer):
         pass
 
     def train(self, rate):
@@ -60,22 +60,22 @@ class fully_connected(_layer):
         'input will be required to train'
         return np.dot(self.input_weights, input) + self.bias
 
-    def backprop_error(self, target):
-        '''error is defined as the partial derivative of the cost function
+    def backprop_delta(self, target):
+        '''delta is defined as the partial derivative of the cost function
         with respect to the ***OUTPUT*** of the current layer
 
         '''
         if self.next_layer:
-            self.error = self.next_layer.backprop_error(target)
+            self.delta = self.next_layer.backprop_delta(target)
         else:
             print('NO OUTPUT LAYER SPECIFIED')
-        return np.dot(self.error, self.input_weights)
+        return np.dot(self.delta, self.input_weights)
 
     def train(self, rate):
         '''GRADIENT DESCENT TRAINING'''
-        self.bias -= rate * self.error
+        self.bias -= rate * self.delta
 
-        self.input_weights -= rate * np.outer(self.error, self.input)
+        self.input_weights -= rate * np.outer(self.delta, self.input)
 
 
 class output(_layer):
@@ -135,9 +135,9 @@ class output(_layer):
     def get_crit(self, input, target):
         return output.crit[self.type]((self.get_output(input), target))
 
-    def backprop_error(self, target):
-        self.error = output.derivative[self.type]((self.output, target))
-        return self.error
+    def backprop_delta(self, target):
+        self.delta = output.derivative[self.type]((self.output, target))
+        return self.delta
 
 
 class activation(_layer):
@@ -186,6 +186,6 @@ class activation(_layer):
     def get_local_output(self, input):
         return self.act(input)
 
-    def backprop_error(self, target):
-        self.error = self.next_layer.backprop_error(target)
-        return self.der(self.error) * self.error
+    def backprop_delta(self, target):
+        self.delta = self.next_layer.backprop_delta(target)
+        return self.der(self.delta) * self.delta
