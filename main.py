@@ -26,12 +26,12 @@ nn.train(input_set=train_data,
 print 'Validating...'
 img, lbl = mndata.load_testing()
 test_data = np.array(img, float)
-test_data -= train_data.mean()
-test_data /= train_data.std()
+test_data -= test_data.mean()
+test_data /= test_data.std()
 
 test_label = np.array(lbl)
-hot_label = np.zeros((train_label.size, train_label.max() + 1))
-hot_label[np.arange(train_label.size), train_label] = 1
+hot_label = np.zeros((test_label.size, test_label.max() + 1))
+hot_label[np.arange(test_label.size), test_label] = 1
 hit = 100 * nn.classification_validate(test_data, hot_label)
 print 'Hit rate:{}%'.format(hit)
 
