@@ -94,9 +94,10 @@ class output(_layer):
         _layer.__init__(self, *args, **kwargs)
 
     def __str__(self):
-        res = '[{}->{}] OUTPUT: {}\n'.format(self.width, self.width, self.type)
+        res = '[{} -> {}] OUTPUT: {}\n'.format(
+            self.width, self.width, self.type)
         res += '\t   |\n'
-        res += '[{}->{}] CRITERION: {}'.format(self.width, 1, self.type)
+        res += '[{} -> {}] CRITERION: {}'.format(self.width, 1, self.type)
         return res
 
     def new_last_layer(self, new_layer):
@@ -152,14 +153,14 @@ class activation(_layer):
         'identity': lambda x: x,
         'relu': lambda x: x * (x > 0),
         'atan': lambda x: np.arctan(x),
-        'soft_step': lambda x: 1 / (1 + np.exp(-x)),
+        'logistic': lambda x: 1 / (1 + np.exp(-x)),
     }
 
     derivative_functions = {
         'identity': lambda x: np.ones(x.shape),
         'relu': lambda x: 1 * (x > 0),
         'atan': lambda x: 1 / (1 + x**2),
-        'soft_step': lambda x: 1 / (1 + np.exp(-x)) - (1 + np.exp(-x))**-2
+        'logistic': lambda x: 1 / (1 + np.exp(-x)) - (1 + np.exp(-x))**-2
     }
 
     def act(self, x):
@@ -177,9 +178,9 @@ class activation(_layer):
             self.width = self.prev_layer.width
 
     def __str__(self):
-        res = '[{}->{}] activation: {}'.format(self.width,
-                                               self.width,
-                                               self.type)
+        res = '[{} -> {}] activation: {}'.format(self.width,
+                                                 self.width,
+                                                 self.type)
         return res
 
     def get_local_output(self, input):

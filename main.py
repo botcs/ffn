@@ -5,10 +5,11 @@ from mnist import MNIST
 mndata = MNIST('.')
 img, lbl = mndata.load_training()
 
-train_data = np.array(img[0:50000], float)
-train_data /= train_data.max()
+train_data = np.array(img, float)
+train_data -= train_data.mean()
+train_data /= train_data.std()
 
-train_label = np.array(lbl[0:50000])
+train_label = np.array(lbl)
 hot_label = np.zeros((train_label.size, train_label.max() + 1))
 hot_label[np.arange(train_label.size), train_label] = 1
 
@@ -16,13 +17,22 @@ hot_label[np.arange(train_label.size), train_label] = 1
 nn = nm.network(in_size=train_data[0].size, criterion='softmax')
 nn.add_full(10)
 print 'Training network on MNIST...'
-nn.train(input_set=train_data[0:1000],
-         target_set=hot_label[0:1000],
-         epoch=1000, rate=0.01)
-print 'Validating...'
+nn.train(input_set=train_data,
+         target_set=hot_label,
+         epoch=1000, rate=0.01,
+         checkpoint='MNIST')
 
-print 'Hit rate:{}%'.format(
-    100 * nn.classification_validate(train_data[10000:20000],
-                                     hot_label[10000:20000]))
+
+print 'Validating...'
+img, lbl = mndata.load_testing()
+test_data = np.array(img, float)
+test_data -= train_data.mean()
+test_data /= train_data.std()
+
+test_label = np.array(lbl)
+hot_label = np.zeros((train_label.size, train_label.max() + 1))
+hot_label[np.arange(train_label.size), train_label] = 1
+hit = 100 * nn.classification_validate(test_data, hot_label)
+print 'Hit rate:{}%'.format(hit)
 
 print nn
