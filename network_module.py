@@ -74,8 +74,8 @@ class network(object):
             # if (e + 1) % (epoch / 10) == 0:
             #     print ('ep. {} error: {}'.format(e + 1, crit))
 
-            if (e + 1) % (epoch / 2) == 0:
-                if cp_name:
+            if cp_name:
+                if (e + 1) % (epoch / 2) == 0:
                     file_name = str(cp_name)
                     file_name += '-e{}-ID'.format(e + 1)
                     file_name += str(id(self)) + '.dat'

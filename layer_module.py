@@ -152,6 +152,7 @@ class activation(_layer):
     activation_functions = {
         'identity': lambda x: x,
         'relu': lambda x: x * (x > 0),
+        'tanh': lambda x: np.tanh(x),
         'atan': lambda x: np.arctan(x),
         'logistic': lambda x: 1 / (1 + np.exp(-x)),
     }
@@ -159,8 +160,9 @@ class activation(_layer):
     derivative_functions = {
         'identity': lambda x: np.ones(x.shape),
         'relu': lambda x: 1 * (x > 0),
+        'tanh': lambda x: 1 - np.square(np.tanh(x)),
         'atan': lambda x: 1 / (1 + x**2),
-        'logistic': lambda x: 1 / (1 + np.exp(-x)) - (1 + np.exp(-x))**-2
+        'logistic': lambda x: 1 / (1 + np.exp(-x)) - 1 / np.square(1 + np.exp(-x))
     }
 
     def act(self, x):
@@ -171,7 +173,7 @@ class activation(_layer):
 
     def __init__(self, *args, **kwargs):
         _layer.__init__(self, *args, **kwargs)
-        if kwargs['type'] == 'input':
+        if kwargs.get('type') == 'input':
             self.type = 'identity'
             self.prev_layer = None
         else:
@@ -189,3 +191,19 @@ class activation(_layer):
     def backprop_delta(self, target):
         self.delta = self.next_layer.backprop_delta(target)
         return self.der(self.delta) * self.delta
+
+
+class dropout(activation):
+
+    def __init__(self, *args, **kwargs):
+        self.type = 'dropout'
+        activation.__init__(self, *args, **kwargs)
+        self.drop_prob = kwargs.get('prob')
+
+    def get_local_output(self, input):
+        self.curr_drop = np.random.rand(input.size) > self.drop_prob
+        return input * self.curr_drop
+
+    def backprop_delta(self, target):
+        self.delta = self.next_layer.backprop_delta(target)
+        return self.drop_prob * self.delta
