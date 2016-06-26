@@ -1,6 +1,7 @@
 import numpy as np
 import network_module as nm
 from mnist import MNIST
+import pdb
 
 mndata = MNIST('.')
 img, lbl = mndata.load_training()
@@ -14,12 +15,21 @@ hot_label = np.zeros((train_label.size, train_label.max() + 1))
 hot_label[np.arange(train_label.size), train_label] = 1
 
 
+#########################
+# NETWORK DEFINITION
 nn = nm.network(in_size=train_data[0].size, criterion='softmax')
+nn.add_activation('dropout', prob=0.3)
 nn.add_full(10)
+nn.add_activation('dropout', prob=0.3)
+nn.add_activation('tanh')
+nn.add_full(10)
+#########################
+
+
 print 'Training network on MNIST...'
 nn.train(input_set=train_data,
          target_set=hot_label,
-         epoch=100, rate=0.01,
+         epoch=10, rate=0.005,
          checkpoint='MNIST')
 
 

@@ -51,8 +51,15 @@ class network(object):
             width=width, prev_layer=self.top_layer)
         self.output.new_last_layer(self.top_layer)
 
-    def add_activation(self, type):
-        self.top_layer = lm.activation(type=type, prev_layer=self.top_layer)
+    def add_activation(self, type, **kwargs):
+        if type == 'dropout':
+            self.top_layer = lm.dropout(
+                type=type, prev_layer=self.top_layer, **kwargs)
+
+        else:
+            self.top_layer = lm.activation(
+                type=type, prev_layer=self.top_layer, **kwargs)
+
         self.output.new_last_layer(self.top_layer)
 
     def train(self, input_set, target_set, epoch, rate, **kwargs):
@@ -74,8 +81,8 @@ class network(object):
             # if (e + 1) % (epoch / 10) == 0:
             #     print ('ep. {} error: {}'.format(e + 1, crit))
 
-            if (e + 1) % (epoch / 2) == 0:
-                if cp_name:
+            if cp_name:
+                if (e + 1) % (epoch / 2) == 0:
                     file_name = str(cp_name)
                     file_name += '-e{}-ID'.format(e + 1)
                     file_name += str(id(self)) + '.dat'
