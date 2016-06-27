@@ -198,12 +198,32 @@ class dropout(activation):
     def __init__(self, *args, **kwargs):
         self.type = 'dropout'
         activation.__init__(self, *args, **kwargs)
-        self.drop_prob = kwargs['prob']
+        self.p = kwargs['p']
 
     def get_local_output(self, input):
-        self.curr_drop = np.random.rand(input.size) > self.drop_prob
+        self.curr_drop = np.random.rand(input.size) > self.p
         return input * self.curr_drop
 
     def backprop_delta(self, target):
         self.delta = self.next_layer.backprop_delta(target)
         return self.curr_drop * self.delta
+
+
+class dropcon(fully_connected):
+
+    def __init__(self, *args, **kwargs):
+        self.type = 'dropcon'
+        fully_connected.__init__(self, *args, **kwargs)
+        self.p = kwargs['p']
+
+    def get_local_output(self, input):
+        self.curr_drop = np.random.random(self.input_weights.shape) > self.p
+        self.input = input
+        return np.dot((self.curr_drop * self.input_weights), input)
+
+    def backprop_delta(self, target):
+        if self.next_layer:
+            self.delta = self.next_layer.backprop_delta(target)
+        else:
+            print('NO OUTPUT LAYER SPECIFIED')
+        return np.dot(self.delta, self.curr_drop * self.input_weights)

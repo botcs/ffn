@@ -42,19 +42,21 @@ class network(object):
     def __init__(self, *args, **kwargs):
         self.input = lm.activation(type='input', width=kwargs['in_size'])
         self.top_layer = self.input
-
         self.output = lm.output(type=kwargs['criterion'],
                                 prev_layer=self.top_layer)
+
+    def add_dropcon(self, **kwargs):
+        self.top_layer = lm.dropcon(prev_layer=self.top_layer, **kwargs)
+        self.output.new_last_layer(self.top_layer)
 
     def add_full(self, width):
         self.top_layer = lm.fully_connected(
             width=width, prev_layer=self.top_layer)
         self.output.new_last_layer(self.top_layer)
 
-    def add_activation(self, type, **kwargs):
+    def add_activation(self, **kwargs):
         if type == 'dropout':
-            self.top_layer = lm.dropout(
-                type=type, prev_layer=self.top_layer, **kwargs)
+            self.top_layer = lm.dropout(prev_layer=self.top_layer, **kwargs)
 
         else:
             self.top_layer = lm.activation(
