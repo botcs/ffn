@@ -14,4 +14,4 @@ nn.add_full(2)
 
 
 nn.train(input_set=logic_table, target_set=or_label,
-         epoch=10000, rate=0.05, checkpoint='simple_or')
+         epoch=10000, rate=0.05, checkpoint='./test_dir/a')

@@ -18,10 +18,8 @@ hot_label[np.arange(train_label.size), train_label] = 1
 #########################
 # NETWORK DEFINITION
 nn = nm.network(in_size=train_data[0].size, criterion='softmax')
-nn.add_activation('dropout', prob=0.3)
-nn.add_full(10)
-nn.add_activation('dropout', prob=0.3)
-nn.add_activation('tanh')
+nn.add_dropcon(width=10, p=0.3)
+nn.add_activation(type='tanh')
 nn.add_full(10)
 #########################
 
