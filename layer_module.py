@@ -43,6 +43,7 @@ class _layer:
 class fully_connected(_layer):
 
     def __init__(self, *args, **kwargs):
+        self.type = 'fulcon'
         _layer.__init__(self, *args, **kwargs)
         '''ROW REPRESENTS OUTPUT NEURON'''
         self.input_weights = np.random.rand(self.width, self.prev_layer.width)
@@ -50,8 +51,8 @@ class fully_connected(_layer):
         self.output = np.zeros([self.width, 1])
 
     def __str__(self):
-        res = '[{} -> {}] fully_connected'.format(self.prev_layer.width,
-                                                  self.width)
+        res = '[{} -> {}] {}:'.format(self.prev_layer.width,
+                                      self.width, self.type)
 
         return res
 
