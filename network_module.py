@@ -11,34 +11,40 @@ class network(object):
 
     def __init__(self, *args, **kwargs):
         self.input = lm.activation(type='input', width=kwargs['in_size'])
-        self.top_layer = self.input
+        self.top = self.input
         self.output = lm.output(type=kwargs['criterion'],
-                                prev_layer=self.top_layer)
+                                prev_layer=self.input)
+        self.layerlist = [self.input, self.output]
+
+    def __getitem__(self, index):
+        return self.layerlist[index]
+
+    def register_new_layer(self, l):
+        self.output.new_last_layer(l)
+        self.layerlist.insert(-1, l)
+        return l
 
     def add_dropcon(self, **kwargs):
-        self.top_layer = lm.dropcon(prev_layer=self.top_layer, **kwargs)
-        self.output.new_last_layer(self.top_layer)
+        self.top = lm.dropcon(prev_layer=self.top, **kwargs)
+        return self.register_new_layer(self.top)
 
     def add_full(self, width):
-        self.top_layer = lm.fully_connected(
-            width=width, prev_layer=self.top_layer)
-        self.output.new_last_layer(self.top_layer)
+        self.top = lm.fully_connected(
+            width=width, prev_layer=self.top)
+        return self.register_new_layer(self.top)
 
     def add_activation(self, type, **kwargs):
         if type == 'dropout':
-            self.top_layer = lm.dropout(prev_layer=self.top_layer, **kwargs)
-
+            self.top = lm.dropout(prev_layer=self.top, **kwargs)
         else:
-            self.top_layer = lm.activation(
-                type=type, prev_layer=self.top_layer, **kwargs)
+            self.top = lm.activation(type=type, prev_layer=self.top, **kwargs)
 
-        self.output.new_last_layer(self.top_layer)
+        return self.register_new_layer(self.top)
 
     def train(self, input_set, target_set, epoch, rate, **kwargs):
         'setting utilities'
         bar = StatusBar(epoch)
         cp_name = kwargs.get('checkpoint')
-        ensure_dir(cp_name)
 
         for e in xrange(epoch):
             '''
@@ -76,10 +82,11 @@ class network(object):
                 file_name += '-e{}-ID'.format(e + 1)
                 file_name += str(id(self)) + '.dat'
                 self.save_state(file_name)
+        if cp_name:
+            print("Saved checkpoint to: '" + file_name + "'")
 
-        print("Saved checkpoint to: '" + file_name + "'")
-
-    def save_state(self, file_name=None):
+    def save_state(self, file_name):
+        ensure_dir(file_name)
         if file_name:
             cPickle.dump(self, open(file_name, 'wb'))
         else:

@@ -58,7 +58,7 @@ class fully_connected(_layer):
 
     def perturb(self, delta):
         'strictly experimental'
-        self.weights += np.random.random(self.weights.shape) * delta
+        self.weights += (np.random.random(self.weights.shape) - 0.5) * delta
 
     def get_local_output(self, input):
         self.input = input
