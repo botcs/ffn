@@ -46,7 +46,7 @@ class fully_connected(_layer):
         self.type = 'fulcon'
         _layer.__init__(self, *args, **kwargs)
         '''ROW REPRESENTS OUTPUT NEURON'''
-        self.input_weights = np.random.rand(self.width, self.prev_layer.width)
+        self.weights = np.random.rand(self.width, self.prev_layer.width)
         self.bias = np.random.rand(self.width)
         self.output = np.zeros([self.width, 1])
 
@@ -56,10 +56,14 @@ class fully_connected(_layer):
 
         return res
 
+    def perturb(self, delta):
+        'strictly experimental'
+        self.weights += np.random.random(self.weights.shape) * delta
+
     def get_local_output(self, input):
         self.input = input
         'input will be required to train'
-        return np.dot(self.input_weights, input) + self.bias
+        return np.dot(self.weights, input) + self.bias
 
     def backprop_delta(self, target):
         '''delta is defined as the partial derivative of the cost function
@@ -70,13 +74,13 @@ class fully_connected(_layer):
             self.delta = self.next_layer.backprop_delta(target)
         else:
             print('NO OUTPUT LAYER SPECIFIED')
-        return np.dot(self.delta, self.input_weights)
+        return np.dot(self.delta, self.weights)
 
     def train(self, rate):
         '''GRADIENT DESCENT TRAINING'''
         self.bias -= rate * self.delta
 
-        self.input_weights -= rate * np.outer(self.delta, self.input)
+        self.weights -= rate * np.outer(self.delta, self.input)
 
 
 class output(_layer):
@@ -218,13 +222,13 @@ class dropcon(fully_connected):
         self.p = kwargs['p']
 
     def get_local_output(self, input):
-        self.curr_drop = np.random.random(self.input_weights.shape) > self.p
+        self.curr_drop = np.random.random(self.weights.shape) > self.p
         self.input = input
-        return np.dot((self.curr_drop * self.input_weights), input)
+        return np.dot((self.curr_drop * self.weights), input)
 
     def backprop_delta(self, target):
         if self.next_layer:
             self.delta = self.next_layer.backprop_delta(target)
         else:
             print('NO OUTPUT LAYER SPECIFIED')
-        return np.dot(self.delta, self.curr_drop * self.input_weights)
+        return np.dot(self.delta, self.curr_drop * self.weights)

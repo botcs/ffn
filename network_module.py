@@ -99,6 +99,9 @@ class network(object):
         res += '\n' + '-' * 30
         return res
 
+    def get_output(self, input):
+        return self.output.get_output(input)
+
     def classification_validate(self, input_set, target_set):
         T = 0.0
         for input, target in zip(input_set, target_set):
