@@ -217,8 +217,8 @@ class dropout(activation):
 class dropcon(fully_connected):
 
     def __init__(self, *args, **kwargs):
-        self.type = 'dropcon'
         fully_connected.__init__(self, *args, **kwargs)
+        self.type = 'dropcon'
         self.p = kwargs['p']
 
     def get_local_output(self, input):
