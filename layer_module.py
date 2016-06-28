@@ -44,16 +44,15 @@ class fully_connected(_layer):
 
     def __init__(self, *args, **kwargs):
         _layer.__init__(self, *args, **kwargs)
-        self.type = 'fulcon'
+        self.type = 'fully'
         '''ROW REPRESENTS OUTPUT NEURON'''
         self.weights = np.random.rand(self.width, self.prev_layer.width)
         self.bias = np.random.rand(self.width)
         self.output = np.zeros([self.width, 1])
 
     def __str__(self):
-        res = '[{} -> {}] {}:'.format(self.prev_layer.width,
-                                      self.width, self.type)
-
+        res = '[{} -> {}] {}'.format(self.prev_layer.width,
+                                     self.width, self.type)
         return res
 
     def perturb(self, delta):
