@@ -43,8 +43,8 @@ class _layer:
 class fully_connected(_layer):
 
     def __init__(self, *args, **kwargs):
-        self.type = 'fulcon'
         _layer.__init__(self, *args, **kwargs)
+        self.type = 'fulcon'
         '''ROW REPRESENTS OUTPUT NEURON'''
         self.weights = np.random.rand(self.width, self.prev_layer.width)
         self.bias = np.random.rand(self.width)
@@ -58,7 +58,7 @@ class fully_connected(_layer):
 
     def perturb(self, delta):
         'strictly experimental'
-        self.weights += np.random.random(self.weights.shape) * delta
+        self.weights += (np.random.random(self.weights.shape) - 0.5) * delta
 
     def get_local_output(self, input):
         self.input = input
