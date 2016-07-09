@@ -46,8 +46,10 @@ class fully_connected(_layer):
         _layer.__init__(self, *args, **kwargs)
         self.type = 'fully'
         '''ROW REPRESENTS OUTPUT NEURON'''
-        self.weights = np.random.rand(self.width, self.prev_layer.width)
-        self.bias = np.random.rand(self.width)
+
+        self.weights = np.random.randn(self.width, self.prev_layer.width)
+
+        self.bias = np.random.randn(self.width)
         self.output = np.zeros([self.width, 1])
 
     def __str__(self):
@@ -57,18 +59,15 @@ class fully_connected(_layer):
 
     def perturb(self, delta):
         'strictly experimental'
-        self.weights += (np.random.random(self.weights.shape) - 0.5) * delta
+        rows, cols = self.weights.shape
+        self.weights += (np.random.randn(rows, cols)) * delta
 
     def get_local_output(self, input):
         self.input = input
-        'input will be required to train'
+        'input will be required for training'
         return np.dot(self.weights, input) + self.bias
 
     def backprop_delta(self, target):
-        '''delta is defined as the partial derivative of the cost function
-        with respect to the ***OUTPUT*** of the current layer
-
-        '''
         if self.next_layer:
             self.delta = self.next_layer.backprop_delta(target)
         else:
@@ -134,14 +133,18 @@ class output(_layer):
     def get_local_output(self, input):
         return output.activation[self.type](input)
 
-    'double paren for lambda wrap'
-
     def get_crit(self, input, target):
-        return output.crit[self.type]((self.get_output(input), target))
+        'double paren for lambda wrap'
+        self.get_output(input)
+        self.prev_delta = output.derivative[self.type]((self.output, target))
+        return output.crit[self.type]((self.output, target))
 
     def backprop_delta(self, target):
-        self.delta = output.derivative[self.type]((self.output, target))
-        return self.delta
+        '''The delta of the output layer wouldn't be used for training
+        so the function returns directly the delta of the previous layer
+        '''
+
+        return self.prev_delta
 
 
 class activation(_layer):
@@ -158,15 +161,15 @@ class activation(_layer):
         'relu': lambda x: x * (x > 0),
         'tanh': lambda x: np.tanh(x),
         'atan': lambda x: np.arctan(x),
-        'logistic': lambda x: 1 / (1 + np.exp(-x)),
+        'logistic': lambda x: 1.0 / (1.0 + np.exp(-x)),
     }
 
     derivative_functions = {
         'identity': lambda x: np.ones(x.shape),
-        'relu': lambda x: 1 * (x > 0),
-        'tanh': lambda x: 1 - np.square(np.tanh(x)),
-        'atan': lambda x: 1 / (1 + x**2),
-        'logistic': lambda x: 1 / (1 + np.exp(-x)) - 1 / np.square(1 + np.exp(-x))
+        'relu': lambda x: 1.0 * (x > 0),
+        'tanh': lambda x: 1.0 - np.square(np.tanh(x)),
+        'atan': lambda x: 1.0 / (1.0 + x**2),
+        'logistic': lambda x: activation.activation_functions['logistic'](x) * (1 - activation.activation_functions['logistic'](x))
     }
 
     def act(self, x):
@@ -190,11 +193,12 @@ class activation(_layer):
         return res
 
     def get_local_output(self, input):
+        self.input = input
         return self.act(input)
 
     def backprop_delta(self, target):
         self.delta = self.next_layer.backprop_delta(target)
-        return self.der(self.delta) * self.delta
+        return self.der(self.input) * self.delta
 
 
 class dropout(activation):
