@@ -3,13 +3,13 @@ import os
 
 
 def ensure_dir(f):
-    d = os.path.dirname(f + '/')
+    d = os.path.dirname(f)
     if not os.path.exists(d):
         try:
             os.makedirs(d)
         except OSError as e:
-            print ('Cannot make directory: ' + e)
-            exit('dirmake: permission denied')
+            print ('Cannot make directory: ' + str(e))
+            raise
 
 
 class StatusBar:
