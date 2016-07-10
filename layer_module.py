@@ -112,12 +112,12 @@ class output(_layer):
         'MSE': lambda (prediction, target):
             0.5 * np.dot(prediction - target, prediction - target),
         'softmax': lambda (prediction, target):
-            np.dot(target, np.log(prediction)) * -1
+            np.dot(target, np.log(np.nan_to_num(prediction)) * -1)
     }
 
     activation = {
         'MSE': lambda x: x,
-        'softmax': lambda x: np.exp(x) / np.sum(np.exp(x))
+        'softmax': lambda x: np.exp(x) / np.sum(np.nan_to_num(np.exp(x)))
     }
 
     derivative = {

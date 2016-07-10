@@ -1,4 +1,6 @@
 import layer_module as lm
+import random
+import numpy as np
 import cPickle
 from utilities import StatusBar, ensure_dir
 
@@ -109,9 +111,12 @@ class network(object):
     def get_output(self, input):
         return self.output.get_output(input)
 
-    def classification_validate(self, input_set, target_set):
-        T = 0.0
-        for input, target in zip(input_set, target_set):
-            T += 1 * self.output.get_output(input).argmax() == target.argmax()
+    def perc_eval(self, test_set):
+        T = self.test_eval(test_set)
+        return T / len(test_set)
 
-        return T / len(target_set)
+    def test_eval(self, test_set):
+        T = 0.0
+        for input, target in test_set:
+            T += 1 * self.output.get_output(input).argmax() == target.argmax()
+        return T
