@@ -119,7 +119,8 @@ class output(_layer):
         'MSE': lambda (prediction, target):
             0.5 * np.dot(prediction - target, prediction - target),
         'softmax': lambda (prediction, target):
-            np.dot(target, np.log(np.max(prediction, 1e-100)) * -1)
+            np.dot(-target, np.log(
+                np.maximum(prediction, np.ones(prediction.shape) * 1e-200)))
     }
 
     activation = {

@@ -1,9 +1,10 @@
 import numpy as np
-import network_module as nm
 from mnist import MNIST
-import pdb
 
-mndata = MNIST('./MNIST')
+'must be in the working directory, or in the python path'
+import network_module as nm
+
+mndata = MNIST('./MNIST_data')
 img, lbl = mndata.load_training()
 
 train_data = np.array(img, float)
@@ -18,7 +19,7 @@ hot_label[np.arange(train_label.size), train_label] = 1
 #########################
 # NETWORK DEFINITION
 nn = nm.network(in_size=train_data[0].size, criterion='softmax')
-nn.add_full(100)
+nn.add_full(700)
 nn.add_activation(type='logistic')
 nn.add_full(10)
 #########################
@@ -27,7 +28,8 @@ nn.add_full(10)
 print 'Training network on MNIST...'
 nn.train(input_set=train_data,
          target_set=hot_label,
-         epoch=10, rate=0.1)
+         epoch=130, rate=0.1,
+         checkpoint='mnist-96')
 
 
 print 'Validating...'
