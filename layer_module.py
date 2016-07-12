@@ -64,7 +64,7 @@ class fully_connected(_layer):
         self.weights += (np.random.randn(rows, cols)) * delta
 
     def get_local_output(self, input):
-        self.input = input
+        self.input = np.array(input).flatten()
         'input will be required for training'
         return np.dot(self.weights, input) + self.bias
 
