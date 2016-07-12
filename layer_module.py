@@ -46,11 +46,12 @@ class fully_connected(_layer):
         _layer.__init__(self, *args, **kwargs)
         self.type = 'fully'
         '''ROW REPRESENTS OUTPUT NEURON'''
-
         self.weights = np.random.randn(self.width, self.prev_layer.width)
-
         self.bias = np.random.randn(self.width)
         self.output = np.zeros([self.width, 1])
+
+        'Sharpening the deviation of initial values - less training required'
+        self.weights /= self.width
 
     def __str__(self):
         res = '[{} -> {}] {}'.format(self.prev_layer.width,
