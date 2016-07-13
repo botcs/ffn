@@ -39,9 +39,11 @@ class network(object):
 
     def add_activation(self, type, **kwargs):
         if type == 'dropout':
-            new = lm.dropout(prev_layer=self.top, **kwargs)
+            new = lm.dropout(prev_layer=self.top,
+                             shape=self.top.shape, **kwargs)
         else:
-            new = lm.activation(type=type, prev_layer=self.top, **kwargs)
+            new = lm.activation(type=type, prev_layer=self.top,
+                                shape=self.top.shape, **kwargs)
 
         return self.register_new_layer(new)
 
@@ -49,6 +51,10 @@ class network(object):
         'setting utilities'
         bar = StatusBar(epoch)
         cp_name = kwargs.get('checkpoint')
+
+        'For eliminating native lists, and tuples'
+        input_set = np.array(input_set)
+        target_set = np.array(target_set)
 
         for e in xrange(epoch):
             '''
@@ -100,12 +106,11 @@ class network(object):
         res = 'Network ID: ' + str(id(self))
         res += '\nNetwork layout:\n'
         res += '-' * 30 + '\n'
-        res += '\tINPUT[{}]'.format(self.input.width)
-        curr = self.input
-        while curr is not None:
-            res += ('\n\t   |\n')
-            res += curr.__str__()
-            curr = curr.next_layer
+        '--------------------------------'
+        res += '\tINPUT  {}'.format(self.input.shape)
+        for i, l in enumerate(self.layerlist[1:], start=1):
+            res += 2 * ('\n\t   |') + '\n\t  |{}|'.format(i) + '\n  '
+            res += l.__str__()
 
         res += '\n' + '-' * 30
         return res

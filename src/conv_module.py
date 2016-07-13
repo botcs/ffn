@@ -9,16 +9,16 @@ class conv(lm._layer):
 
     def __init__(self, *args, **kwargs):
         lm._layer.__init__(self, *args, **kwargs)
-        self.type = 'conv'
+        self.type = 'convolution'
         self.kernel_shape = kwargs['kernel_shape']
         self.nok = kwargs.get('num_of_ker')
         self.kernels = np.random.randn(self.nok, *self.kernel_shape)
 
-        self.shape = np.add(
-            np.subtract(self.prev_layer.shape, self.kernel_shape), (1, 1))
-
+        self.shape = (self.nok,)
+        self.shape += tuple(np.add(
+            np.subtract(self.prev_layer.shape, self.kernel_shape), (1, 1)))
         'For fully connected next layer'
-        self.width = self.nok * np.prod(self.shape)
+        self.width = np.prod(self.shape)
 
     def get_local_output(self, input):
         self.input = np.array(input)
@@ -26,9 +26,12 @@ class conv(lm._layer):
                                 axis=0) for k in self.kernels])
 
     def backprop_delta(self, target):
-        self.deltas = self.next_layer.backprop_delta(target)
-        return [np.sum([convolve2d(d, k[::-1, ::-1], mode='valid')
-                        for k in self.kernels]) for d in self.deltas]
+        self.deltas = self.next_layer.backprop_delta(
+            target).reshape(self.shape)
+
+        return np.array(
+            np.sum([convolve2d(d, k[::-1, ::-1])
+                    for d, k in zip(self.deltas, self.kernels)], axis=0))
 
     def train(self, rate):
         for k, d in zip(self.kernels, self.deltas):
@@ -36,8 +39,9 @@ class conv(lm._layer):
                                  for i in self.input])
 
     def __str__(self):
-        res = 'CONVOLUTION: {} x [{} x {}] kernel'.format(
-            self.nok, *self.kernel_shape)
+        res = lm._layer.__str__(self)
+        res += '   ->   kernels: {} x {}'.format(
+            self.nok, self.kernel_shape)
         return res
 
 
@@ -53,6 +57,6 @@ class max_pool(lm._layer):
         N, h, w = x.shape
         n, m = self.shape
         x = x.reshape(N, h / n, n, w / m, m)\
-            .swapaxes(2, 3)\
-            .reshape(N, h / n, w / m, n * m)
+             .swapaxes(2, 3)\
+             .reshape(N, h / n, w / m, n * m)
         return np.amax(x, axis=3)

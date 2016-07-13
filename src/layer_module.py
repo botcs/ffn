@@ -13,6 +13,8 @@ class _layer:
         self.shape = kwargs.get('shape')
         if self.shape and not self.width:
             self.width = np.prod(self.shape)
+        elif self.width:
+            self.shape = (self.width,)
 
     def get_propagated_input(self, input):
         '''Recursive definition, a layer can only produce real output from the
@@ -41,8 +43,7 @@ class _layer:
         pass
 
     def __str__(self):
-        res = '[{} -> {}] {}'.format(self.prev_layer.width,
-                                     self.width, self.type)
+        res = '{}  {}'.format(self.type, self.shape)
         return res
 
 
@@ -50,7 +51,7 @@ class fully_connected(_layer):
 
     def __init__(self, *args, **kwargs):
         _layer.__init__(self, *args, **kwargs)
-        self.type = 'fully'
+        self.type = 'fully_connected'
         '''ROW REPRESENTS OUTPUT NEURON'''
         self.weights = np.random.randn(self.width, self.prev_layer.width)
         self.bias = np.random.randn(self.width)
@@ -58,11 +59,6 @@ class fully_connected(_layer):
 
         'Sharpening the deviation of initial values - less training required'
         self.weights /= self.width
-
-    def __str__(self):
-        res = '[{} -> {}] {}'.format(self.prev_layer.width,
-                                     self.width, self.type)
-        return res
 
     def perturb(self, delta):
         'strictly experimental'
@@ -76,7 +72,8 @@ class fully_connected(_layer):
 
     def backprop_delta(self, target):
         if self.next_layer:
-            self.delta = self.next_layer.backprop_delta(target)
+            self.delta = self.next_layer.backprop_delta(
+                target).reshape(self.shape)
         else:
             print('NO OUTPUT LAYER SPECIFIED')
         return np.dot(self.delta, self.weights)
@@ -86,6 +83,12 @@ class fully_connected(_layer):
         self.bias -= rate * self.delta
 
         self.weights -= rate * np.outer(self.delta, self.input)
+
+    def __str__(self):
+        res = _layer.__str__(self)
+        res += '   ->   weights + bias: {} + {}'.format(
+            self.weights.shape, self.bias.shape)
+        return res
 
 
 class output(_layer):
@@ -104,16 +107,16 @@ class output(_layer):
         _layer.__init__(self, *args, **kwargs)
 
     def __str__(self):
-        res = '[{} -> {}] OUTPUT: {}\n'.format(
-            self.width, self.width, self.type)
-        res += '\t   |\n'
-        res += '[{} -> {}] CRITERION: {}'.format(self.width, 1, self.type)
+        res = '\tOUTPUT  {}'.format(self.shape)
+        res += '   ->   '
+        res += 'CRITERION  ({})'.format(self.type, self.shape, 1)
         return res
 
     def new_last_layer(self, new_layer):
         self.prev_layer = new_layer
         self.prev_layer.next_layer = self
         self.width = new_layer.width
+        self.shape = new_layer.shape
 
     crit = {
         'MSE': lambda (prediction, target):
@@ -144,14 +147,13 @@ class output(_layer):
     def get_crit(self, input, target):
         'double paren for lambda wrap'
         self.get_output(input)
-        self.prev_delta = output.derivative[self.type]((self.output, target))
         return output.crit[self.type]((self.output, target))
 
     def backprop_delta(self, target):
         '''The delta of the output layer wouldn't be used for training
         so the function returns directly the delta of the previous layer
         '''
-
+        self.prev_delta = output.derivative[self.type]((self.output, target))
         return self.prev_delta
 
 
@@ -195,17 +197,14 @@ class activation(_layer):
             self.width = self.prev_layer.width
 
     def __str__(self):
-        res = '[{} -> {}] activation: {}'.format(self.width,
-                                                 self.width,
-                                                 self.type)
-        return res
+        return 'activation {}   ->   type: {}'.format(self.shape, self.type)
 
     def get_local_output(self, input):
         self.input = input
         return self.act(input)
 
     def backprop_delta(self, target):
-        self.delta = self.next_layer.backprop_delta(target)
+        self.delta = self.next_layer.backprop_delta(target).reshape(self.shape)
         return self.der(self.input) * self.delta
 
 
@@ -221,7 +220,7 @@ class dropout(activation):
         return input * self.curr_drop
 
     def backprop_delta(self, target):
-        self.delta = self.next_layer.backprop_delta(target)
+        self.delta = self.next_layer.backprop_delta(target).reshape(self.shape)
         return self.curr_drop * self.delta
 
 
@@ -239,7 +238,8 @@ class dropcon(fully_connected):
 
     def backprop_delta(self, target):
         if self.next_layer:
-            self.delta = self.next_layer.backprop_delta(target)
+            self.delta = self.next_layer.backprop_delta(
+                target).reshape(self.delta)
         else:
             print('NO OUTPUT LAYER SPECIFIED')
         return np.dot(self.delta, self.curr_drop * self.weights)
