@@ -48,7 +48,7 @@ class network(object):
 
     def add_activation(self, type, **kwargs):
         self.register_new_layer(
-            lm.activation(type, prev=self.top, shape=self.top.shape, **kwargs))
+            lm.activation(type, prev=self.top, **kwargs))
         return self
 
     '''Network supervised training'''
