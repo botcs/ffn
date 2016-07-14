@@ -1,5 +1,6 @@
 import sys
 import os
+import warnings
 
 
 def ensure_dir(f):
@@ -10,6 +11,11 @@ def ensure_dir(f):
         except OSError as e:
             print ('Cannot make directory: ' + str(e))
             raise
+
+
+def warning(message, instance, warn_type=FutureWarning):
+    note = '\n  Warning for: ' + repr(instance)
+    warnings.warn(message + note, warn_type)
 
 
 class StatusBar:
