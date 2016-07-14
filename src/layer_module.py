@@ -5,19 +5,18 @@ import warnings
 
 class _layer:
 
-    def __init__(self, *args, **kwargs):
+    def __init__(self, **kwargs):
         'get returns None instead of raising KeyError'
         self.type = kwargs.get('type')
-        self.prev_layer = kwargs.get('prev_layer')
-        self.next_layer = kwargs.get('next_layer')
+        self.prev = kwargs.get('prev')
+        self.next = kwargs.get('next')
 
         self.width = kwargs.get('width')
         self.shape = kwargs.get('shape')
-        if self.prev_layer is None:
+        if self.prev is None:
             util.warning('No previous layer defined', self)
-        if self.next_layer is None:
-            util.warning('No next layer defined', self)
 
+        'Shape states for the default output of the layer'
         if self.shape and not self.width:
             self.width = np.prod(self.shape)
         elif self.width:
@@ -31,8 +30,8 @@ class _layer:
         one layer, is when there is no previous layer
 
         '''
-        if self.prev_layer:
-            input = self.prev_layer.get_output(input)
+        if self.prev:
+            input = self.prev.get_output(input)
 
         return input
 
@@ -41,14 +40,10 @@ class _layer:
 
     def get_output(self, input):
         prop_in = self.get_propagated_input(input)
-        if prop_in.shape != self.shape:
-            util.warning('Wrong input shape: {}\n  expected shape: {}'.format(
-                prop_in.shape, self.shape), self)
-
         self.output = self.get_local_output(prop_in)
         return self.output
 
-    def backprop_delta(self, next_layer):
+    def backprop_delta(self, next):
         pass
 
     def train(self, rate):
@@ -61,12 +56,12 @@ class _layer:
 
 class fully_connected(_layer):
 
-    def __init__(self, *args, **kwargs):
-        _layer.__init__(self, type='fully connected', *args, **kwargs)
+    def __init__(self, **kwargs):
+        _layer.__init__(self, type='fully connected', **kwargs)
         '''ROW REPRESENTS OUTPUT NEURON'''
         assert self.width is not None, "'shape=' or 'width=' must be defined"
-        if self.prev_layer:
-            self.weights = np.random.randn(self.width, self.prev_layer.width)
+        if self.prev:
+            self.weights = np.random.randn(self.width, self.prev.width)
         self.bias = np.random.randn(self.width)
         self.output = np.zeros([self.width, 1])
 
@@ -79,20 +74,19 @@ class fully_connected(_layer):
         self.weights += (np.random.randn(rows, cols)) * delta
 
     def get_local_output(self, input):
-        self.input = np.array(input).flatten()
+        self.input = np.array(input).squeeze()
         'input will be required for training'
         return np.dot(self.weights, self.input) + self.bias
 
     def backprop_delta(self, target):
-        if self.next_layer:
-            self.delta = self.next_layer.backprop_delta(
+        if self.next:
+            self.delta = self.next.backprop_delta(
                 target).reshape(self.shape)
         return np.dot(self.delta, self.weights)
 
     def train(self, rate):
         '''GRADIENT DESCENT TRAINING'''
         self.bias -= rate * self.delta
-
         self.weights -= rate * np.outer(self.delta, self.input)
 
     def __str__(self):
@@ -124,7 +118,8 @@ class activation(_layer):
         'relu': lambda x: 1.0 * (x > 0),
         'tanh': lambda x: 1.0 - np.square(np.tanh(x)),
         'atan': lambda x: 1.0 / (1.0 + x**2),
-        'logistic': lambda x: activation.activation_functions['logistic'](x) * (1 - activation.activation_functions['logistic'](x))
+        'logistic': lambda x: activation.activation_functions['logistic'](x) *
+            (1 - activation.activation_functions['logistic'](x))
     }
 
     def act(self, x):
@@ -133,8 +128,12 @@ class activation(_layer):
     def der(self, x):
         return activation.derivative_functions[self.type](x)
 
-    def __init__(self, type, *args, **kwargs):
-        _layer.__init__(self, type=type, *args, **kwargs)
+    def __init__(self, type, **kwargs):
+        if kwargs.get('prev'):
+            prev_shape = kwargs.get('prev').shape
+            _layer.__init__(self, shape=prev_shape, type=type, **kwargs)
+        else:
+            _layer.__init__(self, type=type, **kwargs)
 
     def __str__(self):
         return 'activation {}   ->   type: {}'.format(self.shape, self.type)
@@ -144,20 +143,20 @@ class activation(_layer):
         return self.act(input)
 
     def backprop_delta(self, target):
-        self.delta = self.next_layer.backprop_delta(target).reshape(self.shape)
+        self.delta = self.next.backprop_delta(target).reshape(self.shape)
         return self.der(self.input) * self.delta
 
 
 class input(activation):
 
-    def __init__(self, shape, *args, **kwargs):
+    def __init__(self, shape, **kwargs):
         with warnings.catch_warnings(record=True):
             warnings.simplefilter('always')
             activation.__init__(self, shape=shape,
-                                type='identity', *args, **kwargs)
+                                type='identity', **kwargs)
 
 
-class output(_layer):
+class output(activation):
     '''Special type of activation layer, that has TWO kind of output:
 
     FIRST is [N -> N] type, very similar to activation, but the
@@ -169,8 +168,8 @@ class output(_layer):
 
     '''
 
-    def __init__(self, *args, **kwargs):
-        _layer.__init__(self, *args, **kwargs)
+    def __init__(self, **kwargs):
+        activation.__init__(self, **kwargs)
 
     def __str__(self):
         res = '\tOUTPUT  {}'.format(self.shape)
@@ -179,8 +178,8 @@ class output(_layer):
         return res
 
     def new_last_layer(self, new_layer):
-        self.prev_layer = new_layer
-        self.prev_layer.next_layer = self
+        self.prev = new_layer
+        self.prev.next = self
         self.width = new_layer.width
         self.shape = new_layer.shape
 
@@ -225,9 +224,9 @@ class output(_layer):
 
 class dropout(activation):
 
-    def __init__(self, p, *args, **kwargs):
+    def __init__(self, p, **kwargs):
         self.type = 'dropout'
-        activation.__init__(self, *args, **kwargs)
+        activation.__init__(self, **kwargs)
         self.p = p
 
     def get_local_output(self, input):
@@ -235,14 +234,14 @@ class dropout(activation):
         return input * self.curr_drop
 
     def backprop_delta(self, target):
-        self.delta = self.next_layer.backprop_delta(target).reshape(self.shape)
+        self.delta = self.next.backprop_delta(target).reshape(self.shape)
         return self.curr_drop * self.delta
 
 
 class dropcon(fully_connected):
 
-    def __init__(self, p, *args, **kwargs):
-        fully_connected.__init__(self, *args, **kwargs)
+    def __init__(self, p, **kwargs):
+        fully_connected.__init__(self, **kwargs)
         self.type = 'dropcon'
         self.p = p
 
@@ -252,7 +251,6 @@ class dropcon(fully_connected):
         return np.dot((self.curr_drop * self.weights), input)
 
     def backprop_delta(self, target):
-        if self.next_layer:
-            self.delta = self.next_layer.backprop_delta(
-                target).reshape(self.delta)
+        if self.next:
+            self.delta = self.next.backprop_delta(target).reshape(self.delta)
         return np.dot(self.delta, self.curr_drop * self.weights)

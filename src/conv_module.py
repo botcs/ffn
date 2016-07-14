@@ -1,29 +1,31 @@
 from scipy.signal import convolve2d
 import numpy as np
 import layer_module as lm
-import utilities as util
 
-np.set_printoptions(precision=2, edgeitems=2, threshold=5)
+np.set_printoptions(precision=2, edgeitems=5, threshold=5)
 
 
 class conv(lm._layer):
 
-    def __init__(self, num_of_ker, kernel_shape, *args, **kwargs):
-        lm._layer.__init__(self, *args, **kwargs)
+    def __init__(self, num_of_ker, kernel_shape, **kwargs):
+        lm._layer.__init__(self, **kwargs)
         self.type = 'convolution'
         self.kernel_shape = kernel_shape
         self.nok = num_of_ker
         self.kernels = np.random.randn(self.nok, *self.kernel_shape)
 
-        if self.prev_layer:
-            '''Shape is the shape of the output layer
-
-               can only be evaluated if the layer is in a network,
-               since it depends on it
-            '''
+        if self.prev:
             self.shape = (self.nok,)
-            self.shape += tuple(np.add(
-                np.subtract(self.prev_layer.shape, self.kernel_shape), (1, 1)))
+            self.shape += tuple(np.add(np.subtract(
+                self.prev.shape[1:], self.kernel_shape), 2*(1,)))
+            '''First parameter is the number of corresponding feature maps
+            The remaining is the shape of the feature maps
+
+            The output of 2D convolution on an input with
+            shape [NxM]
+            kernel [kxl]
+            results in [(N-k+1) x (M-l+1)]'''
+
             'For fully connected next layer'
             self.width = np.prod(self.shape)
 
@@ -33,7 +35,7 @@ class conv(lm._layer):
                                 axis=0) for k in self.kernels])
 
     def backprop_delta(self, target):
-        self.deltas = self.next_layer.backprop_delta(
+        self.deltas = self.next.backprop_delta(
             target).reshape(self.shape)
 
         return np.array(
@@ -54,31 +56,40 @@ class conv(lm._layer):
 
 class max_pool(lm._layer):
 
-    def __init__(self, shape=None, pool_shape=None, *args, **kwargs):
-        lm._layer.__init__(self, shape=shape, type='max pool', *args, **kwargs)
+    def __init__(self, pool_shape=None, shape=None, **kwargs):
+        lm._layer.__init__(self, shape=shape, type='max pool', **kwargs)
         assert (shape is None) ^ (pool_shape is None),\
             "'pool_shape=' XOR 'shape=' must be defined"
 
-        if self.prev_layer:
+        if self.prev:
             if shape:
-                self.pool_shape = np.divide(self.prev_layer.shape, shape)
+                sp = np.divide(self.prev.shape, shape)
+                '''First dimension is the number of feature maps in the previous
+                   layer'''
+                self.pool_shape = tuple(sp[1:])
             else:
-                self.shape = np.divide(
-                    self.prev_layer.shape, pool_shape).squeeze()
+                self.pool_shape = pool_shape
+                self.shape = tuple(np.divide(self.prev.shape, (1,)+pool_shape))
                 self.width = np.prod(self.shape)
 
     def get_local_output(self, input):
         x = np.array(input)
         N, h, w = x.shape
-        n, m = self.shape
+        n, m = self.pool_shape
+        'Reshape for pooling'
         x = x.reshape(N, h / n, n, w / m, m)\
              .swapaxes(2, 3)\
              .reshape(N, h / n, w / m, n * m)
         res = np.amax(x, axis=3)
-        self.switch = np.any([input == i for i in res.flatten()], axis=0)
+        'Keep record of which neurons were chosen in the pool by their index'
+        self.switch = np.any([input == i for i in res.flatten()], axis=0)\
+                        .nonzero()
+
         return res
 
     def backprop_delta(self, target):
-        # self.delta = self.next_layer.backprop_delta(target)
-        res = np.ones(np.prod(self.pool_shape) + self.shape)
+        # self.delta = self.next.backprop_delta(target)
+        delta = target
+        res = np.zeros(self.prev.shape)
+        res[self.switch] = delta.flatten()
         return res

@@ -1,52 +1,57 @@
 import layer_module as lm
-import random
+import conv_module as cm
 import numpy as np
 import cPickle
 from utilities import StatusBar, ensure_dir
 
 
 class network(object):
+    '''Layer manager object
 
-    @classmethod
-    def load(cls, load):
-        return cPickle.load(open(load, 'rb'))
+    despite layers can be handled as separate instances, adding new
+    components, registering them, and training becomes inefficient for
+    deep-network architects
 
-    def __init__(self, *args, **kwargs):
-        self.input = lm.activation(type='input', shape=kwargs['in_shape'])
-        self.top = self.input
-        self.output = lm.output(type=kwargs['criterion'],
-                                prev_layer=self.input)
-        self.layerlist = [self.input, self.output]
+    '''
 
-    def __getitem__(self, index):
-        return self.layerlist[index]
-
+    '''Network extension definitions'''
     def register_new_layer(self, l):
-        self.top.next_layer = l
-        l.prev_layer = self.top
+        self.top.next = l
+        l.prev = self.top
         self.top = l
         self.output.new_last_layer(l)
         self.layerlist.insert(-1, l)
         return l
 
-    def add_dropcon(self, **kwargs):
-        new = lm.dropcon(prev_layer=self.top, **kwargs)
-        return self.register_new_layer(new)
+    def add_conv(self, num_of_ker, kernel_shape,  **kwargs):
+        self.register_new_layer(
+            cm.conv(num_of_ker, kernel_shape, prev=self.top, **kwargs))
+        return self
 
-    def add_full(self, width):
-        new = lm.fully_connected(width=width, prev_layer=self.top)
-        return self.register_new_layer(new)
+    def add_maxpool(self, pool_shape=None, shape=None, **kwargs):
+        self.register_new_layer(
+            cm.max_pool(pool_shape, shape, prev=self.top, **kwargs))
+        return self
+
+    def add_dropcon(self, p, **kwargs):
+        self.register_new_layer(lm.dropcon(p, prev=self.top, **kwargs))
+        return self
+
+    def add_full(self, width, **kwargs):
+        self.register_new_layer(
+            lm.fully_connected(width=width, prev=self.top, **kwargs))
+        return self
+
+    def add_dropout(self, p, **kwargs):
+        self.register_new_layer(lm.dropout(p, prev=self.top, **kwargs))
+        return self
 
     def add_activation(self, type, **kwargs):
-        if type == 'dropout':
-            new = lm.dropout(prev_layer=self.top,
-                             shape=self.top.shape, **kwargs)
-        else:
-            new = lm.activation(type=type, prev_layer=self.top,
-                                shape=self.top.shape, **kwargs)
+        self.register_new_layer(
+            lm.activation(type, prev=self.top, shape=self.top.shape, **kwargs))
+        return self
 
-        return self.register_new_layer(new)
-
+    '''Network supervised training'''
     def train(self, input_set, target_set, epoch, rate, **kwargs):
         'setting utilities'
         bar = StatusBar(epoch)
@@ -76,9 +81,9 @@ class network(object):
                 self.input.backprop_delta(target)
 
                 curr = self.output
-                while curr.prev_layer is not None:
+                while curr.prev is not None:
                     'iterating over layers to train them, if trainable'
-                    curr = curr.prev_layer
+                    curr = curr.prev
                     curr.train(rate)
                     '''i.e. activation layers cannot be trained because they
                        doesn't hold any changeable parameters'''
@@ -115,15 +120,31 @@ class network(object):
         res += '\n' + '-' * 30
         return res
 
+    @classmethod
+    def load(cls, load):
+        return cPickle.load(open(load, 'rb'))
+
+    def __init__(self, in_shape, criterion, **kwargs):
+        self.input = lm.input(in_shape)
+        self.top = self.input
+        self.output = lm.output(type=criterion, prev=self.top)
+        self.layerlist = [self.input, self.output]
+
+    def __getitem__(self, index):
+        return self.layerlist[index]
+
+    def __repr__(self):
+        return self.__str__()
+
     def get_output(self, input):
         return self.output.get_output(input)
 
     def perc_eval(self, test_set):
         T = self.test_eval(test_set)
-        return T / len(test_set)
+        return T * 100.0 / len(test_set)
 
     def test_eval(self, test_set):
-        T = 0.0
+        T = 0
         for input, target in test_set:
             T += 1 * self.output.get_output(input).argmax() == target.argmax()
         return T
