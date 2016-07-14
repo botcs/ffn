@@ -88,8 +88,7 @@ class max_pool(lm._layer):
         return res
 
     def backprop_delta(self, target):
-        # self.delta = self.next.backprop_delta(target)
-        delta = target
+        self.delta = self.next.backprop_delta(target)
         res = np.zeros(self.prev.shape)
         res[self.switch] = delta.flatten()
         return res
