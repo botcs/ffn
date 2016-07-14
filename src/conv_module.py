@@ -2,7 +2,7 @@ from scipy.signal import convolve2d
 import numpy as np
 import layer_module as lm
 
-np.set_printoptions(precision=2, edgeitems=5, threshold=5)
+np.set_printoptions(precision=2, edgeitems=2, threshold=5)
 
 
 class conv(lm._layer):
@@ -88,7 +88,7 @@ class max_pool(lm._layer):
         return res
 
     def backprop_delta(self, target):
-        self.delta = self.next.backprop_delta(target)
+        self.delta = self.next.backprop_delta(target).reshape(self.shape)
         res = np.zeros(self.prev.shape)
         res[self.switch] = self.delta.flatten()
         return res
