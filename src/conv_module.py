@@ -85,13 +85,17 @@ class max_pool(lm._layer):
              .reshape(N, h / n, w / m, n * m)
         res = np.amax(x, axis=3)
         'Keep record of which neurons were chosen in the pool by their index'
-        self.switch = np.any([input == i for i in res.flatten()], axis=0)\
-                        .nonzero()
-
+        # self.switch = np.any(
+        #     [input == i for i in res.flatten()], axis=0).nonzero()
+        self.switch = np.any([input == i for i in res.flatten()], axis=0)
         return res
 
     def backprop_delta(self, target):
         self.delta = self.next.backprop_delta(target).reshape(self.shape)
-        res = np.zeros(self.prev.shape)
-        res[self.switch] = self.delta.flatten()
+        # res = np.zeros(self.prev.shape)
+        # res[self.switch] = self.delta.flatten()
+        res = self.delta.repeat(self.pool_shape[0], axis=1)\
+                        .repeat(self.pool_shape[1], axis=2)\
+                        * self.switch
+        
         return res
