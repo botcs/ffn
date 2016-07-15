@@ -97,5 +97,9 @@ class max_pool(lm._layer):
         res = self.delta.repeat(self.pool_shape[0], axis=1)\
                         .repeat(self.pool_shape[1], axis=2)\
                         * self.switch
-        
+        return res
+
+    def __str__(self):
+        res = lm._layer.__str__(self)
+        res += '   ->   pool shape: {}'.format(self.pool_shape)
         return res

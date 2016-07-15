@@ -14,7 +14,17 @@ class network(object):
 
     '''
 
-    '''Network extension definitions'''
+    '''Network modification definitions'''
+    def pop_top_layer(self):
+        assert len(self.layerlist) > 2, \
+            'No hidden layers to be popped'
+        popped = self.top
+        # using remove, pop would remove the OUTPUT layer which is forbidden
+        self.layerlist.remove(self.top)
+        self.top = self.top.prev
+        self.output.new_last_layer(self.top)
+        return popped
+
     def register_new_layer(self, l):
         self.top.next = l
         l.prev = self.top
