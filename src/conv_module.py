@@ -38,9 +38,12 @@ class conv(lm._layer):
         self.deltas = self.next.backprop_delta(
             target).reshape(self.shape)
 
-        return np.array(
-            np.sum([convolve2d(d, k[::-1, ::-1])
-                    for d, k in zip(self.deltas, self.kernels)], axis=0))
+        '''Each feature map is the result of all previous layer maps,
+        therefore the same gradient has to be spread for each'''
+        res = np.sum([convolve2d(d, k[::-1, ::-1]) for d, k in
+                      zip(self.deltas, self.kernels)], axis=0)\
+                .reshape(self.prev.shape[1:])
+        return np.array([res for i in xrange(self.prev.shape[0])])
 
     def train(self, rate):
         for k, d in zip(self.kernels, self.deltas):
