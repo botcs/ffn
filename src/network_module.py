@@ -71,6 +71,7 @@ class network(object):
         input_set = np.array(input_set)
         target_set = np.array(target_set)
 
+        result = []
         for e in xrange(epoch):
             '''
             calculating criterion yields the FORWARD propagation
@@ -99,6 +100,7 @@ class network(object):
                        doesn't hold any changeable parameters'''
 
             crit /= len(input_set)
+            result.append((crit, self.test_eval(kwargs.get("test_set"))))
             bar.update(crit)
             'Saving checkpoints during training is useful'
             if cp_name and (e + 1) % (epoch / 2) == 0:
@@ -109,6 +111,7 @@ class network(object):
                 self.save_state(file_name)
         if cp_name:
             print("Saved checkpoint to: '" + file_name + "'")
+        return result
 
     def save_state(self, file_name):
         ensure_dir(file_name)

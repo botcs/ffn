@@ -80,10 +80,7 @@ class max_pool(lm._layer):
         N, h, w = x.shape
         n, m = self.pool_shape
         'Reshape for pooling'
-        x = x.reshape(N, h / n, n, w / m, m)\
-             .swapaxes(2, 3)\
-             .reshape(N, h / n, w / m, n * m)
-        res = np.amax(x, axis=3)
+        res = input.reshape(N, h/n, n, w/m, m).max(axis=(2, 4))
         'Keep record of which neurons were chosen in the pool by their index'
         # self.switch = np.any(
         #     [input == i for i in res.flatten()], axis=0).nonzero()
