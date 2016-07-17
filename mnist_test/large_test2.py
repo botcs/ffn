@@ -32,6 +32,8 @@ print 'constructing network'
 nn = nm.network(in_shape=train_data[0].shape, criterion='softmax')
 nn.add_conv(10, (5, 5))
 nn.add_activation('tanh')
+nn.add_conv(10, (5,5))
+nn.add_activation('tanh')
 # nn.add_maxpool((4, 4))
 nn.add_full(150)
 nn.add_activation('tanh')
@@ -45,13 +47,13 @@ def print_csv(filename, data):
         for t in data:
             out.write('{}\t{}\n'.format(*t))
 
-name = 'conv_10x5x5-FC_150-10'
+name = 'conv_10x5x5-10x5x5--FC_150-10'
 
 
 print 'Training network on MNIST...'
 result = nn.train(input_set=train_data,
                   target_set=train_hot,
-                  epoch=30, rate=0.005,
+                  epoch=50, rate=0.005,
                   test_set=(zip(test_data, test_hot)),
                   checkpoint='./test_runs/nets/{}-rate005'.format(name))
 

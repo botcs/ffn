@@ -30,10 +30,10 @@ print 'constructing network'
 #########################
 # NETWORK DEFINITION
 nn = nm.network(in_shape=train_data[0].shape, criterion='softmax')
-nn.add_conv(10, (5, 5))
-nn.add_activation('tanh')
+# nn.add_conv(10, (5, 5))
+# nn.add_activation('tanh')
 # nn.add_maxpool((4, 4))
-nn.add_full(150)
+nn.add_full(650)
 nn.add_activation('tanh')
 nn.add_full(10)
 #########################
@@ -45,7 +45,7 @@ def print_csv(filename, data):
         for t in data:
             out.write('{}\t{}\n'.format(*t))
 
-name = 'conv_10x5x5-FC_150-10'
+name = 'FC_650-10'
 
 
 print 'Training network on MNIST...'
