@@ -1,0 +1,8 @@
+files = system('ls *-*');
+set multiplot layout 1, 2;
+set title 'loss'
+plot for [f in files] f u 1 with lines notitle;
+set title 'Test hit';
+plot for [f in files] f u 2 with linespoints lw 2 title f;
+unset multiplot;
+pause -1
