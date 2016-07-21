@@ -215,6 +215,7 @@ class network(object):
         return self.perc_eval(validation_set) < kwargs['valid']
 
     def stop_when_overfit(self, training_set, validation_set, **kwargs):
+        'TODO: utolso 3-4 epoch treshold alatt csak akkor allitja meg'
         try:
             prev_hit = self.last_hit
             self.last_hit = self.test_eval(validation_set)

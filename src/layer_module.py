@@ -69,7 +69,6 @@ class fully_connected(_layer):
         if self.prev:
             self.weights = np.random.randn(self.width, self.prev.width)
         self.bias = np.random.randn(self.width)
-        self.output = np.zeros([self.width, 1])
 
         'Sharpening the deviation of initial values - less training required'
         self.weights /= self.width
