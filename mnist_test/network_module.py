@@ -158,6 +158,66 @@ class network(object):
 
     def test_eval(self, test_set):
         T = 0
-        for input, target in test_set:
+        for input, target in zip(*test_set):
             T += 1 * self.output.get_output(input).argmax() == target.argmax()
         return T
+
+    'NETWORK TRAINING METHODS'
+    def SGD(self, train_policy, training_set,
+            batch, rate,
+            validation_set=None, epoch_call_back=None, **kwargs):
+
+        for l in self.layerlist:
+            'Set the training method for layers where it is implemented'
+            try:
+                l.train = l.SGDtrain
+            except AttributeError:
+                continue
+
+        'For eliminating native lists, and tuples'
+        input_set = np.array(training_set[0])
+        target_set = np.array(training_set[1])
+        assert len(input_set) == len(target_set),\
+            'input and training set is not equal in size'
+        counter = 0
+        while train_policy(training_set, validation_set, **kwargs):
+            for b in xrange(len(input_set)/batch):
+                for i in xrange(batch):
+                    counter += 1
+                    'FORWARD'
+                    self.get_output(input_set[b + i])
+
+                    'BACKWARD'
+                    self.input.backprop_delta(target_set[b + i])
+
+                    'PARAMETER GRADIENT ACCUMULATION'
+                    for l in self.layerlist:
+                        l.acc_grad()
+
+            for l in self.layerlist:
+                l.train(rate)
+
+            if epoch_call_back:
+                'Some logging function is called here'
+                epoch_call_back()
+        print counter
+
+    'NETWORK TRAINING POLICIES'
+    def fix_epoch(self, training_set, validation_set, **kwargs):
+        try:
+            self.last_epoch += 1
+            return self.last_epoch <= kwargs['epoch']
+        except AttributeError:
+            self.last_epoch = 1
+            return True
+
+    def fix_hit_rate(self, training_set, validation_set, **kwargs):
+        return self.perc_eval(validation_set) < kwargs['valid']
+
+    def stop_when_overfit(self, training_set, validation_set, **kwargs):
+        try:
+            prev_hit = self.last_hit
+            self.last_hit = self.test_eval(validation_set)
+            return prev_hit < self.last_hit
+        except AttributeError:
+            self.last_hit = self.test_eval(validation_set)

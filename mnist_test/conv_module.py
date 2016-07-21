@@ -13,6 +13,7 @@ class conv(lm._layer):
         self.kernel_shape = kernel_shape
         self.nok = num_of_ker
         self.kernels = np.random.randn(self.nok, *self.kernel_shape)
+        self.biases = np.random.randn(self.nok)
 
         if self.prev:
             self.shape = (self.nok,)
@@ -32,11 +33,11 @@ class conv(lm._layer):
     def get_local_output(self, input):
         self.input = np.array(input)
         return np.array([np.sum([convolve2d(i, k, mode='valid')for i in input],
-                                axis=0) for k in self.kernels])
+                                axis=0) + b
+                         for k, b in zip(self.kernels, self.biases)])
 
     def backprop_delta(self, target):
-        self.deltas = self.next.backprop_delta(
-            target).reshape(self.shape)
+        self.deltas = self.next.backprop_delta(target).reshape(self.shape)
 
         '''Each feature map is the result of all previous layer maps,
         therefore the same gradient has to be spread for each'''
@@ -45,10 +46,29 @@ class conv(lm._layer):
                 .reshape(self.prev.shape[1:])
         return np.array([res for i in xrange(self.prev.shape[0])])
 
-    def train(self, rate):
-        for k, d in zip(self.kernels, self.deltas):
-            k += -rate * np.sum([convolve2d(i, d, mode='valid')
-                                 for i in self.input])
+    def get_param_grad(self):
+        return (np.sum([([convolve2d(i, d, mode='valid') for d in self.deltas])
+                        for i in self.input], axis=0),
+                np.sum(self.deltas, axis=(1, 2)))
+
+    def acc_grad(self):
+        grad = self.get_param_grad()
+        try:
+            self.acc_count += 1
+            'Kernels'
+            self.k_acc += grad[0]
+            'Biases'
+            self.b_acc += grad[1]
+        except AttributeError:
+            self.acc_count = 1
+            self.k_acc, self.b_acc = grad
+
+    def SGDtrain(self, rate):
+        self.kernels -= rate / self.acc_count * self.k_acc
+        self.biases -= rate / self.acc_count * self.b_acc
+        self.acc_count = 0
+        self.k_acc = [np.zeros(k.shape) for k in self.kernels]
+        self.b_acc = np.zeros(self.biases.shape)
 
     def __str__(self):
         res = lm._layer.__str__(self)

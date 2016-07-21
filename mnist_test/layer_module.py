@@ -38,6 +38,12 @@ class _layer:
     def get_local_output(self, input):
         pass
 
+    def get_param_grad(self):
+        pass
+
+    def acc_grad(self):
+        pass
+
     def get_output(self, input):
         prop_in = self.get_propagated_input(input)
         self.output = self.get_local_output(prop_in)
@@ -84,10 +90,26 @@ class fully_connected(_layer):
                 target).reshape(self.shape)
         return np.dot(self.delta, self.weights)
 
-    def train(self, rate):
+    def get_param_grad(self):
+        return (np.outer(self.delta, self.input), self.delta)
+
+    def SGDtrain(self, rate):
         '''GRADIENT DESCENT TRAINING'''
-        self.bias -= rate * self.delta
-        self.weights -= rate * np.outer(self.delta, self.input)
+        self.bias -= rate / self.acc_count * self.b_acc
+        self.weights -= rate / self.acc_count * self.w_acc
+        self.b_acc = np.zeros(self.bias.shape)
+        self.w_acc = np.zeros(self.weights.shape)
+        self.acc_count = 0
+
+    def acc_grad(self):
+        grad = self.get_param_grad()
+        try:
+            self.acc_count += 1
+            self.w_acc += grad[0]
+            self.b_acc += grad[1]
+        except AttributeError:
+            self.acc_count = 1
+            self.w_acc, self.b_acc = grad
 
     def __str__(self):
         res = _layer.__str__(self)
