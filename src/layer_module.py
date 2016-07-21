@@ -20,7 +20,11 @@ class _layer:
         if self.shape and not self.width:
             self.width = np.prod(self.shape)
         elif self.width:
-            self.shape = (self.width,)
+            self.shape = (self.width)
+
+        'Shape must be always a tuple... numpy syntax will blow up else'
+        if type(self.shape) is not tuple:
+            self.shape = (self.shape,)
 
     def get_propagated_input(self, input):
         '''Recursive definition, a layer can only produce real output from the
@@ -75,40 +79,33 @@ class fully_connected(_layer):
 
     def perturb(self, delta):
         'strictly experimental'
-        rows, cols = self.weights.shape
-        self.weights += (np.random.randn(rows, cols)) * delta
+        self.weights += (np.random.randn(*self.weights.shape)) * delta
 
     def get_local_output(self, input):
-        self.input = np.array(input).flatten()
+        assert type(input) == np.ndarray, 'Only numpy array can be used'
+        if len(input.shape) == 1:
+            'input is a single sample'
+            input.shape = (1,) + input.shape
+
         'input will be required for training'
-        return np.dot(self.weights, self.input) + self.bias
+        self.input = input
+        return np.dot(self.input, self.weights.T) + self.bias
 
     def backprop_delta(self, target):
-        if self.next:
-            self.delta = self.next.backprop_delta(
-                target).reshape(self.shape)
+        assert self.next, 'Missing next layer, delta cannot be evaluated'
+        self.delta = self.next.backprop_delta(target)
         return np.dot(self.delta, self.weights)
 
     def get_param_grad(self):
-        return (np.outer(self.delta, self.input), self.delta)
+        'weight and bias gradient'
+        return (np.mean([np.outer(i, d) for i, d in
+                         zip(self.input, self.delta)]), np.mean(self.delta))
 
     def SGDtrain(self, rate):
         '''GRADIENT DESCENT TRAINING'''
-        self.bias -= rate / self.acc_count * self.b_acc
-        self.weights -= rate / self.acc_count * self.w_acc
-        self.b_acc = np.zeros(self.bias.shape)
-        self.w_acc = np.zeros(self.weights.shape)
-        self.acc_count = 0
-
-    def acc_grad(self):
-        grad = self.get_param_grad()
-        try:
-            self.acc_count += 1
-            self.w_acc += grad[0]
-            self.b_acc += grad[1]
-        except AttributeError:
-            self.acc_count = 1
-            self.w_acc, self.b_acc = grad
+        w_grad, b_grad = self.get_param_grad()
+        self.weights -= rate * w_grad
+        self.bias -= rate * b_grad
 
     def __str__(self):
         res = _layer.__str__(self)
@@ -164,10 +161,39 @@ class activation(_layer):
         return self.act(input)
 
     def backprop_delta(self, target):
-        self.delta = self.next.backprop_delta(target).reshape(self.shape)
+        self.delta = self.next.backprop_delta(target)
         return self.der(self.input) * self.delta
 
 
+class shaper(_layer):
+    def __init__(self, shape, **kwargs):
+        _layer.__init__(self, shape=shape, type='shaper', **kwargs)
+        assert np.prod(self.prev.shape) == np.prod(shape),\
+            'The shaper cannot modify the size of the output:{} vs. {}'\
+            .format(np.prod(self.prev.shape), np.prod(shape))
+
+    def get_local_output(self, input):
+        '''Only purpose of this layer is forced shaping of the input useful
+        when processing a batch input, where a normal input shape
+        would be (S1, S2, ...) and the batch size is B then the batch
+        input's shape is (B, S1, S2, ...).
+
+        The output shape will always be (B, S1', S2', ...)  where
+        product of S' IS equal to the product of S, and the first
+        dimension's size doesn't change.
+
+        I.e. flattening for a fully connected layer the input
+        should be flattened in all axes, but the first one.
+
+        '''
+        self.b_size = (input.shape[0],)
+        return input.reshape(self.b_size + self.shape)
+
+    def backprop_delta(self, target):
+        return self.next.backprop_delta(target)\
+                   .reshape(self.b_size + self.prev.shape)
+
+    
 class input(activation):
 
     def __init__(self, shape, **kwargs):

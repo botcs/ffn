@@ -30,10 +30,11 @@ print 'constructing network'
 #########################
 # NETWORK DEFINITION
 nn = nm.network(in_shape=train_data[0].shape, criterion='softmax')
-nn.add_conv(10, (5, 5))
+# nn.add_conv(10, (5, 5))
 # nn.add_activation('tanh')
 # nn.add_maxpool((4, 4))
 # nn.add_full(150)
+nn.add_shaper(784)
 nn.add_activation('tanh')
 nn.add_full(10)
 #########################
@@ -57,12 +58,14 @@ print 'Training network on MNIST...'
 #                   checkpoint='./test_runs/nets/{}-rate005'.format(name))
 
 result = []
+
+
 def print_test():
-    print nn.last_epoch, ' ', nn.test_eval((test_data, train_hot))
+    print nn.last_epoch, ' ', nn.test_eval((test_data, test_hot))
     result.append((nn.test_eval((train_data, train_hot)),
                    nn.test_eval((test_data, test_hot))))
 
 nn.SGD(train_policy=nn.fix_epoch, training_set=(train_data, train_hot),
-       batch=10, rate=0.05, epoch_call_back=print_test, epoch=50)
+       batch=69, rate=0.05, epoch_call_back=print_test, epoch=50)
 
 print_csv('./test_runs/{}-rate005'.format(name), result)

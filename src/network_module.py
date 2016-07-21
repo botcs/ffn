@@ -61,6 +61,11 @@ class network(object):
             lm.activation(type, prev=self.top, **kwargs))
         return self
 
+    def add_shaper(self, shape, **kwargs):
+        self.register_new_layer(
+            lm.shaper(shape, prev=self.top, **kwargs))
+        return self
+
     '''Network supervised training'''
     def train(self, input_set, target_set, epoch, rate, **kwargs):
         'setting utilities'
@@ -157,10 +162,8 @@ class network(object):
         return T * 100.0 / len(test_set)
 
     def test_eval(self, test_set):
-        T = 0
-        for input, target in zip(*test_set):
-            T += 1 * self.output.get_output(input).argmax() == target.argmax()
-        return T
+        return np.count_nonzero(self.get_output(test_set[0]).argmax(axis=1) ==
+                                test_set[1].argmax(axis=1))
 
     'NETWORK TRAINING METHODS'
     def SGD(self, train_policy, training_set,
@@ -177,22 +180,19 @@ class network(object):
         'For eliminating native lists, and tuples'
         input_set = np.array(training_set[0])
         target_set = np.array(training_set[1])
+        
         assert len(input_set) == len(target_set),\
             'input and training set is not equal in size'
-        counter = 0
         while train_policy(training_set, validation_set, **kwargs):
-            for b in xrange(len(input_set)/batch):
-                for i in xrange(batch):
-                    counter += 1
-                    'FORWARD'
-                    self.get_output(input_set[b + i])
+            num_of_batches = len(input_set)/batch
+            for b in xrange(batch):
+                'FORWARD'
+                self.get_output(input_set[b::num_of_batches])
 
-                    'BACKWARD'
-                    self.input.backprop_delta(target_set[b + i])
+                'BACKWARD'
+                self.input.backprop_delta(target_set[b::num_of_batches])
 
-                    'PARAMETER GRADIENT ACCUMULATION'
-                    for l in self.layerlist:
-                        l.acc_grad()
+                'PARAMETER GRADIENT ACCUMULATION'
 
             for l in self.layerlist:
                 l.train(rate)
@@ -200,7 +200,6 @@ class network(object):
             if epoch_call_back:
                 'Some logging function is called here'
                 epoch_call_back()
-        print counter
 
     'NETWORK TRAINING POLICIES'
     def fix_epoch(self, training_set, validation_set, **kwargs):
