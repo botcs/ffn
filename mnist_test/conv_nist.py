@@ -58,11 +58,11 @@ print 'Training network on MNIST...'
 
 result = []
 def print_test():
-    print nn.last_epoch, ' ', nn.test_eval(train_data, train_hot)
-    result.append((nn.test_eval(train_data, train_hot),
-                   nn.test_eval(test_data, test_hot)))
+    print nn.last_epoch, ' ', nn.test_eval((test_data, train_hot))
+    result.append((nn.test_eval((train_data, train_hot)),
+                   nn.test_eval((test_data, test_hot))))
 
 nn.SGD(train_policy=nn.fix_epoch, training_set=(train_data, train_hot),
-       batch=2, rate=0.05, epoch_call_back=print_test, epoch=10)
+       batch=10, rate=0.05, epoch_call_back=print_test, epoch=50)
 
 print_csv('./test_runs/{}-rate005'.format(name), result)
