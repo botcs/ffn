@@ -66,6 +66,6 @@ def print_test():
                    nn.test_eval((test_data, test_hot))))
 
 nn.SGD(train_policy=nn.fix_epoch, training_set=(train_data, train_hot),
-       batch=69, rate=0.05, epoch_call_back=print_test, epoch=50)
+       batch=100, rate=0.1, epoch_call_back=print_test, epoch=50)
 
-print_csv('./test_runs/{}-rate005'.format(name), result)
+# print_csv('./test_runs/{}-rate005'.format(name), result)

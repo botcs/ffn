@@ -83,12 +83,14 @@ class fully_connected(_layer):
 
     def get_local_output(self, input):
         assert type(input) == np.ndarray, 'Only numpy array can be used'
-        if len(input.shape) == 1:
-            'input is a single sample'
-            input.shape = (1,) + input.shape
 
         'input will be required for training'
-        self.input = input
+        if len(input.shape) == 1:
+            'if input is a single sample, extend it to a 1 sized batch'
+            self.input = np.expand_dims(input, 0)
+        else:
+            self.input = input
+            
         return np.dot(self.input, self.weights.T) + self.bias
 
     def backprop_delta(self, target):

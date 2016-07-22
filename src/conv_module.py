@@ -7,16 +7,19 @@ np.set_printoptions(precision=2, edgeitems=2, threshold=5)
 
 class conv(lm._layer):
 
-    def __init__(self, num_of_ker, kernel_shape, **kwargs):
+    def __init__(self, num_of_featmap, kernel_shape, **kwargs):
         lm._layer.__init__(self, **kwargs)
         self.type = 'convolution'
         self.kernel_shape = kernel_shape
-        self.nok = num_of_ker
-        self.kernels = np.random.randn(self.nok, *self.kernel_shape)
-        self.biases = np.random.randn(self.nok)
+        self.nof = num_of_featmap
+        "prev layer's shape[0] is the number of output channels/feature maps"
+        self.kernels = np.random.randn(
+            self.prev.shape[0], self.nof, *self.kernel_shape)
+
+        self.biases = np.random.randn(self.prev.shape[0], self.nof)
 
         if self.prev:
-            self.shape = (self.nok,)
+            self.shape = (self.nof,)
             self.shape += tuple(np.add(np.subtract(
                 self.prev.shape[1:], self.kernel_shape), 2*(1,)))
             '''First parameter is the number of corresponding feature maps
@@ -31,26 +34,37 @@ class conv(lm._layer):
             self.width = np.prod(self.shape)
 
     def get_local_output(self, input):
-        self.input = np.array(input)
-        return np.array([np.sum([convolve2d(i, k, mode='valid')for i in input],
-                                axis=0) + b
-                         for k, b in zip(self.kernels, self.biases)])
+        assert type(input) == np.ndarray
+
+        'input will be required for training'
+        if len(input.shape) == 3:
+            'if input is a single sample, extend it to a 1 sized batch'
+            self.input = np.expand_dims(input, 0)
+        else:
+            self.input = input
+
+        '''Each channel has its corresponding kernel in each feature map
+        feature map activation is evaluated by summing their activations
+        for each sample in input batch'''
+        return np.ndarray(
+            [[np.sum([convolve2d(c, k, 'valid')
+                      for c, k in zip(channels, kernel_set)])
+              for channels, kernel_set in zip(sample, self.kernels)]
+             for sample in self.input])
 
     def backprop_delta(self, target):
-        self.deltas = self.next.backprop_delta(target).reshape(self.shape)
+        self.delta = self.next.backprop_delta(target).reshape(self.shape)
 
         '''Each feature map is the result of all previous layer maps,
         therefore the same gradient has to be spread for each'''
-        res = np.sum([convolve2d(d, k[::-1, ::-1]) for d, k in
-                      zip(self.deltas, self.kernels)], axis=0)\
-                .reshape(self.prev.shape[1:])
-        return np.array([res for i in xrange(self.prev.shape[0])])
+        return np.sum([
+            [[convolve2d(k[::-1, ::-1], d) for k in kernel_set]
+             for d, kernel_set in zip(sample_delta, self.kernels)]
+            for sample_delta in self.delta], axis=1)
 
     def get_param_grad(self):
-        return (np.sum([([convolve2d(i, d, mode='valid') for d in self.deltas])
-                        for i in self.input], axis=0),
-                np.sum(self.deltas, axis=(1, 2)))
-
+        pass
+    
     def acc_grad(self):
         grad = self.get_param_grad()
         try:
