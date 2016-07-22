@@ -99,7 +99,8 @@ class fully_connected(_layer):
     def get_param_grad(self):
         'weight and bias gradient'
         return (np.mean([np.outer(i, d) for i, d in
-                         zip(self.input, self.delta)]), np.mean(self.delta))
+                         zip(self.input, self.delta)], axis=0).T,
+                np.mean(self.delta, axis=0))
 
     def SGDtrain(self, rate):
         '''GRADIENT DESCENT TRAINING'''
