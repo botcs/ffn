@@ -46,11 +46,11 @@ class conv(lm._layer):
         '''Each channel has its corresponding kernel in each feature map
         feature map activation is evaluated by summing their activations
         for each sample in input batch'''
-        return np.ndarray(
-            [[np.sum([convolve2d(c, k, 'valid')
-                      for c, k in zip(channels, kernel_set)])
-              for channels, kernel_set in zip(sample, self.kernels)]
-             for sample in self.input])
+        return np.sum(
+            [[[convolve2d(channel, kernel, 'valid')
+               for kernel in kernel_set]
+              for channel, kernel_set in zip(sample, self.kernels)]
+             for sample in self.input], axis=1)
 
     def backprop_delta(self, target):
         self.delta = self.next.backprop_delta(target).reshape(self.shape)
@@ -63,7 +63,11 @@ class conv(lm._layer):
             for sample_delta in self.delta], axis=1)
 
     def get_param_grad(self):
-        pass
+        return np.array(
+            [[[convolve2d(channel, d, 'valid')
+               for d in sample_delta]
+              for channel in sample_input]
+             for sample_input, sample_delta in zip(self.input, self.delta)])
     
     def acc_grad(self):
         grad = self.get_param_grad()
@@ -86,8 +90,7 @@ class conv(lm._layer):
 
     def __str__(self):
         res = lm._layer.__str__(self)
-        res += '   ->   kernels: {} x {}'.format(
-            self.nok, self.kernel_shape)
+        res += '   ->   kernels: {}'.format(self.kernels.shape)
         return res
 
 
