@@ -16,8 +16,6 @@ class conv(lm._layer):
         self.kernels = np.random.randn(
             self.prev.shape[0], self.nof, *self.kernel_shape)
 
-        self.biases = np.random.randn(self.prev.shape[0], self.nof)
-
         if self.prev:
             self.shape = (self.nof,)
             self.shape += tuple(np.add(np.subtract(
@@ -32,6 +30,8 @@ class conv(lm._layer):
 
             'For fully connected next layer'
             self.width = np.prod(self.shape)
+            
+        self.bias = np.random.randn(self.shape)
 
     def get_local_output(self, input):
         assert type(input) == np.ndarray
@@ -50,7 +50,7 @@ class conv(lm._layer):
             [[[convolve2d(channel, kernel, 'valid')
                for kernel in kernel_set]
               for channel, kernel_set in zip(sample, self.kernels)]
-             for sample in self.input], axis=1)
+             for sample in self.input], axis=1) + self.bias
 
     def backprop_delta(self, target):
         self.delta = self.next.backprop_delta(target).reshape(self.shape)
@@ -63,30 +63,19 @@ class conv(lm._layer):
             for sample_delta in self.delta], axis=1)
 
     def get_param_grad(self):
-        return np.array(
+        return (np.array(
+            # KERNEL GRAD
             [[[convolve2d(channel, d, 'valid')
                for d in sample_delta]
               for channel in sample_input]
-             for sample_input, sample_delta in zip(self.input, self.delta)])
-    
-    def acc_grad(self):
-        grad = self.get_param_grad()
-        try:
-            self.acc_count += 1
-            'Kernels'
-            self.k_acc += grad[0]
-            'Biases'
-            self.b_acc += grad[1]
-        except AttributeError:
-            self.acc_count = 1
-            self.k_acc, self.b_acc = grad
+             for sample_input, sample_delta in zip(self.input, self.delta)]),
+            # BIAS GRAD
+            self.delta)
 
     def SGDtrain(self, rate):
-        self.kernels -= rate / self.acc_count * self.k_acc
-        self.biases -= rate / self.acc_count * self.b_acc
-        self.acc_count = 0
-        self.k_acc = [np.zeros(k.shape) for k in self.kernels]
-        self.b_acc = np.zeros(self.biases.shape)
+        k_update, b_update = self.get_param_grad()
+        self.kernels -= rate * k_update.mean()
+        self.bias -= rate / b_update.mean()
 
     def __str__(self):
         res = lm._layer.__str__(self)
