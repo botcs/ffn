@@ -30,8 +30,7 @@ class conv(lm._layer):
 
             'For fully connected next layer'
             self.width = np.prod(self.shape)
-            
-        self.bias = np.random.randn(*self.shape)
+            self.bias = np.random.randn(*self.shape)
 
     def get_local_output(self, input):
         assert type(input) == np.ndarray
@@ -50,7 +49,7 @@ class conv(lm._layer):
             [[[convolve2d(channel, kernel, 'valid')
                for kernel in kernel_set]
               for channel, kernel_set in zip(sample, self.kernels)]
-             for sample in self.input], axis=1)
+             for sample in self.input], axis=1) + self.bias
 
     def backprop_delta(self, target):
         self.delta = self.next.backprop_delta(target).reshape(self.shape)
