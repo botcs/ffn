@@ -1,3 +1,4 @@
 *.dat
 *.pyc
 *~
+/mnist_test/test_runs
