@@ -1,1 +1,1 @@
-/home/botcs/Documents/own_neur/src/conv_module.py
+/home/botcs/PycharmProjects/ffn/src/conv_module.py

@@ -35,7 +35,7 @@ class network(object):
 
     def add_conv(self, num_of_ker, kernel_shape,  **kwargs):
         self.register_new_layer(
-            cm.conv(num_of_ker, kernel_shape, prev=self.top, **kwargs))
+            cm.Conv(num_of_ker, kernel_shape, prev=self.top, **kwargs))
         return self
 
     def add_maxpool(self, pool_shape=None, shape=None, **kwargs):
@@ -185,7 +185,7 @@ class network(object):
             'input and training set is not equal in size'
         while train_policy(training_set, validation_set, **kwargs):
             num_of_batches = len(input_set)/batch
-            for b in xrange(batch):
+            for b in xrange(num_of_batches):
                 'FORWARD'
                 self.get_output(input_set[b::num_of_batches])
 
@@ -193,9 +193,8 @@ class network(object):
                 self.input.backprop_delta(target_set[b::num_of_batches])
 
                 'PARAMETER GRADIENT ACCUMULATION'
-
-            for l in self.layerlist:
-                l.train(rate)
+                for l in self.layerlist:
+                    l.train(rate)
 
             if epoch_call_back:
                 'Some logging function is called here'

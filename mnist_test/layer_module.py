@@ -1,1 +1,1 @@
-/home/botcs/Documents/own_neur/src/layer_module.py
+/home/botcs/PycharmProjects/ffn/src/layer_module.py

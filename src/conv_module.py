@@ -5,10 +5,10 @@ import layer_module as lm
 np.set_printoptions(precision=2, edgeitems=2, threshold=5)
 
 
-class conv(lm._layer):
+class Conv(lm.AbstractLayer):
 
     def __init__(self, num_of_featmap, kernel_shape, **kwargs):
-        lm._layer.__init__(self, **kwargs)
+        lm.AbstractLayer.__init__(self, **kwargs)
         self.type = 'convolution'
         self.kernel_shape = kernel_shape
         self.nof = num_of_featmap
@@ -77,15 +77,15 @@ class conv(lm._layer):
         self.bias -= rate / b_update.mean()
 
     def __str__(self):
-        res = lm._layer.__str__(self)
+        res = lm.AbstractLayer.__str__(self)
         res += '   ->   kernels: {}'.format(self.kernels.shape)
         return res
 
 
-class max_pool(lm._layer):
+class max_pool(lm.AbstractLayer):
 
     def __init__(self, pool_shape=None, shape=None, **kwargs):
-        lm._layer.__init__(self, shape=shape, type='max pool', **kwargs)
+        lm.AbstractLayer.__init__(self, shape=shape, type='max pool', **kwargs)
         assert (shape is None) ^ (pool_shape is None),\
             "'pool_shape=' XOR 'shape=' must be defined"
 
@@ -101,27 +101,31 @@ class max_pool(lm._layer):
                 self.width = np.prod(self.shape)
 
     def get_local_output(self, input):
-        x = np.array(input)
-        N, h, w = x.shape
+
+        if len(input.shape) == 3:
+            'if input is a single sample, extend it to a 1 sized batch'
+            x = np.expand_dims(input, 0)
+        else:
+            x = input
+
+        'batch size will be needed for backprop'
+        self.batch, N, h, w = x.shape
         n, m = self.pool_shape
         'Reshape for pooling'
-        res = input.reshape(N, h/n, n, w/m, m).max(axis=(2, 4))
-        'Keep record of which neurons were chosen in the pool by their index'
-        # self.switch = np.any(
-        #     [input == i for i in res.flatten()], axis=0).nonzero()
+        res = input.reshape(self.batch, N, h/n, n, w/m, m).max(axis=(3, 5))
         self.switch = np.any([input == i for i in res.flatten()], axis=0)
         return res
 
     def backprop_delta(self, target):
-        self.delta = self.next.backprop_delta(target).reshape(self.shape)
+        self.delta = self.next.backprop_delta(target).reshape((self.batch, ) + self.shape)
         # res = np.zeros(self.prev.shape)
         # res[self.switch] = self.delta.flatten()
-        res = self.delta.repeat(self.pool_shape[0], axis=1)\
-                        .repeat(self.pool_shape[1], axis=2)\
+        res = self.delta.repeat(self.pool_shape[0], axis=2)\
+                        .repeat(self.pool_shape[1], axis=3)\
                         * self.switch
         return res
 
     def __str__(self):
-        res = lm._layer.__str__(self)
+        res = lm.AbstractLayer.__str__(self)
         res += '   ->   pool shape: {}'.format(self.pool_shape)
         return res

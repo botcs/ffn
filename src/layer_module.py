@@ -3,7 +3,7 @@ import utilities as util
 import warnings
 
 
-class _layer:
+class AbstractLayer:
 
     def __init__(self, **kwargs):
         'get returns None instead of raising KeyError'
@@ -64,10 +64,10 @@ class _layer:
         return res
 
 
-class fully_connected(_layer):
+class fully_connected(AbstractLayer):
 
     def __init__(self, **kwargs):
-        _layer.__init__(self, type='fully connected', **kwargs)
+        AbstractLayer.__init__(self, type='fully connected', **kwargs)
         '''ROW REPRESENTS OUTPUT NEURON'''
         assert self.width is not None, "'shape=' or 'width=' must be defined"
         if self.prev:
@@ -111,13 +111,13 @@ class fully_connected(_layer):
         self.bias -= rate * b_grad
 
     def __str__(self):
-        res = _layer.__str__(self)
+        res = AbstractLayer.__str__(self)
         res += '   ->   weights + bias: {} + {}'.format(
             self.weights.shape, self.bias.shape)
         return res
 
 
-class activation(_layer):
+class activation(AbstractLayer):
     '''
     STRICTLY ONE-TO-ONE CONNECTION, WITH f ACTIVATION FUNCTIONS
 
@@ -152,9 +152,9 @@ class activation(_layer):
     def __init__(self, type, **kwargs):
         if kwargs.get('prev'):
             prev_shape = kwargs.get('prev').shape
-            _layer.__init__(self, shape=prev_shape, type=type, **kwargs)
+            AbstractLayer.__init__(self, shape=prev_shape, type=type, **kwargs)
         else:
-            _layer.__init__(self, type=type, **kwargs)
+            AbstractLayer.__init__(self, type=type, **kwargs)
 
     def __str__(self):
         return 'activation {}   ->   type: {}'.format(self.shape, self.type)
@@ -168,15 +168,15 @@ class activation(_layer):
         return self.der(self.input) * self.delta
 
 
-class shaper(_layer):
+class shaper(AbstractLayer):
     def __init__(self, shape, **kwargs):
-        _layer.__init__(self, shape=shape, type='shaper', **kwargs)
+        AbstractLayer.__init__(self, shape=shape, type='shaper', **kwargs)
         assert np.prod(self.prev.shape) == np.prod(shape),\
             'The shaper cannot modify the size of the output:{} vs. {}'\
             .format(np.prod(self.prev.shape), np.prod(shape))
 
     def get_local_output(self, input):
-        '''Only purpose of this layer is forced shaping of the input useful
+        """Only purpose of this layer is forced shaping of the input useful
         when processing a batch input, where a normal input shape
         would be (S1, S2, ...) and the batch size is B then the batch
         input's shape is (B, S1, S2, ...).
@@ -188,7 +188,7 @@ class shaper(_layer):
         I.e. flattening for a fully connected layer the input
         should be flattened in all axes, but the first one.
 
-        '''
+        """
         self.b_size = (input.shape[0],)
         return input.reshape(self.b_size + self.shape)
 
@@ -237,13 +237,12 @@ class output(activation):
         'MSE': lambda (prediction, target):
             0.5 * np.dot(prediction - target, prediction - target),
         'softmax': lambda (prediction, target):
-            np.dot(-target, np.log(
-                np.maximum(prediction, np.ones(prediction.shape) * 1e-200)))
+            np.dot(-target, np.log(prediction))
     }
 
     activation = {
         'MSE': lambda x: x,
-        'softmax': lambda x: np.exp(x) / np.sum(np.exp(x))
+        'softmax': lambda x: np.exp(x-np.max(x)) / np.sum(np.exp(x-np.max(x)), axis=1)[:, np.newaxis]
     }
 
     derivative = {

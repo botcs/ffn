@@ -1,1 +1,1 @@
-/home/botcs/Documents/own_neur/src/network_module.py
+/home/botcs/PycharmProjects/ffn/src/network_module.py
