@@ -76,6 +76,11 @@ class Conv(lm.AbstractLayer):
         self.kernels -= rate * k_update.mean()
         self.bias -= rate / b_update.mean()
 
+    def L2train(self, rate, reg):
+        k_update, b_update = self.get_param_grad()
+        self.kernels -= rate * k_update +\
+                        self.kernels * (rate * reg) / len(self.delta)
+
     def __str__(self):
         res = lm.AbstractLayer.__str__(self)
         res += '   ->   kernels: {}'.format(self.kernels.shape)
@@ -113,16 +118,23 @@ class max_pool(lm.AbstractLayer):
         n, m = self.pool_shape
         'Reshape for pooling'
         res = input.reshape(self.batch, N, h/n, n, w/m, m).max(axis=(3, 5))
-        self.switch = np.any([input == i for i in res.flatten()], axis=0)
+        'Keep record of which neurons were chosen in the pool by their index'
+        # self.switch = np.any(
+        #     [input == i for i in res.flatten()], axis=0).nonzero()
+        self.switch = np.any(
+            [input == i for i in res[res != 0].flatten()], axis=1)
+
         return res
 
     def backprop_delta(self, target):
-        self.delta = self.next.backprop_delta(target).reshape((self.batch, ) + self.shape)
-        # res = np.zeros(self.prev.shape)
-        # res[self.switch] = self.delta.flatten()
-        res = self.delta.repeat(self.pool_shape[0], axis=2)\
-                        .repeat(self.pool_shape[1], axis=3)\
-                        * self.switch
+        self.delta = self.next.backprop_delta(target)\
+                              .reshape((self.batch, ) + self.shape)
+        res = np.zeros(self.prev.shape)
+        res[self.switch] = self.delta.flatten()
+        # POOR IMPLEMENTATION
+        # res = self.delta.repeat(self.pool_shape[0], axis=2)\
+        #                 .repeat(self.pool_shape[1], axis=3)\
+        #                 * self.switch
         return res
 
     def __str__(self):
