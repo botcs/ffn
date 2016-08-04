@@ -29,14 +29,14 @@ test_hot[np.arange(test_label.size), test_label] = 1
 print 'constructing network'
 #########################
 # NETWORK DEFINITION
-nn = nm.network(in_shape=train_data[0].shape, criterion='softmax')
+nn = nm.network(in_shape=train_data[0].shape, criterion='MSE')
 # nn.add_conv(10, (5, 5))
-nn.add_maxpool((2, 2))
-nn.add_activation('tanh')
+nn.add_maxpool(pool_shape=(3, 3), stride=3)
+# nn.add_activation('tanh')
 
-nn.add_shaper(14 * 14)
-# nn.add_full(150)
-nn.add_full(10)
+# nn.add_shaper(14 * 14)
+# # nn.add_full(150)
+# nn.add_full(10)
 #########################
 print nn
 
@@ -76,9 +76,11 @@ def imshow(*args):
     plt.show()
 
 
-nn.SGD(train_policy=nn.fix_epoch, training_set=(train_data, train_hot),
-       batch=300, rate=0.05, epoch_call_back=print_test, epoch=3)
-imshow(nn[4].weights[0].reshape(14, 14))
+imshow(nn.get_output(test_data[0]))
+
+    
+# nn.SGD(train_policy=nn.fix_epoch, training_set=(train_data, train_hot),
+#        batch=300, rate=0.05, epoch_call_back=print_test, epoch=3)
 
 # print_csv('./test_runs/{}-rate005'.format(name), result)
-import matplotlib.pyplot as plt
+

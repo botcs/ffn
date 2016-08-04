@@ -1,8 +1,9 @@
 from scipy.signal import convolve2d
+import pdb
 import numpy as np
 import layer_module as lm
 
-np.set_printoptions(precision=2, edgeitems=2, threshold=5)
+# np.set_printoptions(precision=2, edgeitems=2, threshold=5)
 
 
 class Conv(lm.AbstractLayer):
@@ -89,10 +90,15 @@ class Conv(lm.AbstractLayer):
 
 class max_pool(lm.AbstractLayer):
 
-    def __init__(self, pool_shape=None, shape=None, **kwargs):
+    def __init__(self, pool_shape=(2, 2), stride=(2, 2), shape=None, **kwargs):
         lm.AbstractLayer.__init__(self, shape=shape, type='max pool', **kwargs)
         assert (shape is None) ^ (pool_shape is None),\
             "'pool_shape=' XOR 'shape=' must be defined"
+
+        if type(stride) == int:
+            self.stride = 2 * (stride, )
+        else:
+            self.stride = stride
 
         if self.prev:
             if shape:
@@ -105,6 +111,32 @@ class max_pool(lm.AbstractLayer):
                 self.shape = tuple(np.divide(self.prev.shape, (1,)+pool_shape))
                 self.width = np.prod(self.shape)
 
+    def im2col(self, input):
+        ''' http://stackoverflow.com/questions/
+            30109068/implement-matlabs-im2col-sliding-in-python
+        '''
+        # pdb.set_trace()
+        D, M, N = input.shape
+        B = self.pool_shape
+        skip = self.stride
+        row_extent = M - B[0] + 1
+        col_extent = N - B[1] + 1
+
+        # Get Starting block indices
+        start_idx = np.arange(B[0])[:, None] * N + np.arange(B[1])
+
+        # Generate Depth indeces
+        didx = M * N * np.arange(D)
+        start_idx = (didx[:, None] + start_idx.ravel())\
+                    .reshape((-1, B[0], B[1]))
+
+        # Get offsetted indices across the height and width of input array
+        offset_idx = np.arange(row_extent)[:, None] * N + np.arange(col_extent)
+
+        # Get all actual indices & index into input array for final output
+        return np.take(input, start_idx.ravel()[:, None] +
+                       offset_idx[::skip[0], ::skip[1]].ravel())
+
     def get_local_output(self, input):
 
         if len(input.shape) == 3:
@@ -114,17 +146,16 @@ class max_pool(lm.AbstractLayer):
             x = input
 
         'batch size will be needed for backprop'
-        self.batch, N, h, w = x.shape
+        batch, N, h, w = x.shape
         n, m = self.pool_shape
         'Reshape for pooling'
-        res = input.reshape(self.batch, N, h/n, n, w/m, m).max(axis=(3, 5))
+        # res = input.reshape(self.batch, N, h/n, n, w/m, m).max(axis=(3, 5))
+        x = x.reshape(-1, h, w)
         'Keep record of which neurons were chosen in the pool by their index'
-        # self.switch = np.any(
-        #     [input == i for i in res.flatten()], axis=0).nonzero()
-        self.switch = np.any(
-            [input == i for i in res[res != 0].flatten()], axis=1)
+        self.x_col = self.im2col(x).reshape(batch, N, n*m, -1)
+        self.switch = self.x_col.argmax(axis=2).reshape(batch, *self.shape)
 
-        return res
+        return np.take(self.x_col, self.switch)
 
     def backprop_delta(self, target):
         self.delta = self.next.backprop_delta(target)\
