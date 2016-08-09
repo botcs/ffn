@@ -1,10 +1,8 @@
 from scipy.signal import convolve2d
-from im2col import im2col_indices, col2im_indices
-import pdb
 import numpy as np
 import layer_module as lm
 
-# np.set_printoptions(precision=2, edgeitems=2, threshold=5)
+np.set_printoptions(precision=2, edgeitems=2, threshold=5)
 
 
 class Conv(lm.AbstractLayer):
@@ -54,7 +52,7 @@ class Conv(lm.AbstractLayer):
              for sample in self.input], axis=1) + self.bias
 
     def backprop_delta(self, target):
-        self.delta = self.next.backprop_delta(target).reshape(self.shape)
+        self.delta = self.next.backprop_delta(target).reshape(-1, *self.shape)
 
         '''Each feature map is the result of all previous layer maps,
         therefore the same gradient has to be spread for each'''
@@ -76,7 +74,7 @@ class Conv(lm.AbstractLayer):
     def SGDtrain(self, rate):
         k_update, b_update = self.get_param_grad()
         self.kernels -= rate * k_update.mean()
-        self.bias -= rate / b_update.mean()
+        self.bias -= rate * b_update.mean()
 
     def L2train(self, rate, reg):
         k_update, b_update = self.get_param_grad()
@@ -91,13 +89,11 @@ class Conv(lm.AbstractLayer):
 
 class max_pool(lm.AbstractLayer):
 
-    def __init__(self, pool_shape=(2, 2), stride=(2, 2), shape=None, **kwargs):
+    def __init__(self, pool_shape=(2, 2), shape=None, **kwargs):
         lm.AbstractLayer.__init__(self, shape=shape, type='max pool', **kwargs)
         assert (shape is None) ^ (pool_shape is None),\
             "'pool_shape=' XOR 'shape=' must be defined"
 
-        assert (type(stride)==int), "'stride=' must be an integer"
-        self.stride = stride
         if self.prev:
             if shape:
                 sp = np.divide(self.prev.shape, shape)

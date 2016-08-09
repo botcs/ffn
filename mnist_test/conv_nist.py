@@ -29,9 +29,9 @@ test_hot[np.arange(test_label.size), test_label] = 1
 print 'constructing network'
 #########################
 # NETWORK DEFINITION
-nn = nm.network(in_shape=train_data[0].shape, criterion='MSE')
-nn.add_conv(10, (5, 5))
-nn.add_maxpool(pool_shape=(2, 2), stride=2)
+nn = nm.network(in_shape=train_data[0].shape, criterion='softmax')
+nn.add_conv(5, (5, 5))
+nn.add_maxpool(pool_shape=(2, 2))
 # nn.add_activation('tanh')
 # nn.add_full(150)
 nn.add_shaper(np.prod(nn[-1].shape))
@@ -67,21 +67,35 @@ def print_test():
 
 def imshow(im):
     import matplotlib.pyplot as plt
-    for i, x in enumerate(im, 1):
-
-        plt.subplot(1, len(im), i)
-        plt.imshow(x.squeeze(), cmap='Greys', interpolation='None')
+    if len(im.shape) == 3:
+        for i, x in enumerate(im, 1):
+            plt.subplot(1, len(im), i)
+            plt.imshow(x.squeeze(), cmap='Greys_r', interpolation='None')
+    if len(im.shape) == 4:
+        for irow, xrow in enumerate(im, 0):
+            for icol, x in enumerate(xrow, 1):
+                print len(im), len(xrow), irow * len(xrow) + icol, '\r'
+                plt.subplot(len(im), len(xrow), irow * len(xrow) + icol)
+                plt.imshow(x.squeeze(), cmap='Greys_r', interpolation='None')
 
     plt.show()
 
-
+    
+def onebatch():
+    nn.get_output(train_data[0:10])
+    nn.input.backprop_delta(train_hot[0:10])
+    nn[1].SGDtrain(0.005)
+    nn[4].SGDtrain(0.005)
+    return nn.test_eval((train_data[0:10], train_hot[0:10]))
+    
+    
 # imshow(nn.get_output(test_data[0]))
-test = nn.get_output(test_data[0:3]) * 100
-im = zip(test_data[0:3], test, nn[1].backprop_delta(test))
-imshow(im[2])
+# test = nn.get_output(test_data[0:3]) * 100
+# im = zip(test_data[0:3], test, nn[1].backprop_delta(test))
+# imshow(im[2])
 
-nn.SGD(train_policy=nn.fix_epoch, training_set=(train_data, train_hot),
-       batch=128, rate=0.05, epoch_call_back=print_test, epoch=10)
+# nn.SGD(train_policy=nn.fix_epoch, training_set=(train_data, train_hot),
+#        batch=16, rate=0.005, epoch_call_back=print_test, epoch=10)
 
 # print_csv('./test_runs/{}-rate005'.format(name), result)
 

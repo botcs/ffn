@@ -2,7 +2,7 @@ from scipy.signal import convolve2d
 import numpy as np
 import layer_module as lm
 
-# np.set_printoptions(precision=2, edgeitems=2, threshold=5)
+np.set_printoptions(precision=2, edgeitems=2, threshold=5)
 
 
 class Conv(lm.AbstractLayer):
@@ -52,7 +52,7 @@ class Conv(lm.AbstractLayer):
              for sample in self.input], axis=1) + self.bias
 
     def backprop_delta(self, target):
-        self.delta = self.next.backprop_delta(target).reshape(self.shape)
+        self.delta = self.next.backprop_delta(target).reshape(-1, *self.shape)
 
         '''Each feature map is the result of all previous layer maps,
         therefore the same gradient has to be spread for each'''
@@ -74,7 +74,7 @@ class Conv(lm.AbstractLayer):
     def SGDtrain(self, rate):
         k_update, b_update = self.get_param_grad()
         self.kernels -= rate * k_update.mean()
-        self.bias -= rate / b_update.mean()
+        self.bias -= rate * b_update.mean()
 
     def L2train(self, rate, reg):
         k_update, b_update = self.get_param_grad()
