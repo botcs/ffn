@@ -1,6 +1,4 @@
 from scipy.signal import convolve2d
-from im2col import im2col_indices, col2im_indices
-import pdb
 import numpy as np
 import layer_module as lm
 
@@ -91,13 +89,11 @@ class Conv(lm.AbstractLayer):
 
 class max_pool(lm.AbstractLayer):
 
-    def __init__(self, pool_shape=(2, 2), stride=(2, 2), shape=None, **kwargs):
+    def __init__(self, pool_shape=(2, 2), shape=None, **kwargs):
         lm.AbstractLayer.__init__(self, shape=shape, type='max pool', **kwargs)
         assert (shape is None) ^ (pool_shape is None),\
             "'pool_shape=' XOR 'shape=' must be defined"
 
-        assert (type(stride)==int), "'stride=' must be an integer"
-        self.stride = stride
         if self.prev:
             if shape:
                 sp = np.divide(self.prev.shape, shape)
