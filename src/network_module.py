@@ -38,9 +38,9 @@ class network(object):
             cm.Conv(num_of_ker, kernel_shape, prev=self.top, **kwargs))
         return self
 
-    def add_maxpool(self, pool_shape=None, shape=None, **kwargs):
+    def add_maxpool(self, **kwargs):
         self.register_new_layer(
-            cm.max_pool(pool_shape, shape, prev=self.top, **kwargs))
+            cm.max_pool(prev=self.top, **kwargs))
         return self
 
     def add_dropcon(self, p, **kwargs):
