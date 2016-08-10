@@ -51,15 +51,13 @@ class Conv(lm.AbstractLayer):
               for channel, kernel_set in zip(sample, self.kernels)]
              for sample in self.input], axis=1) + self.bias
 
-    def backprop_delta(self, target):
-        self.delta = self.next.backprop_delta(target).reshape(-1, *self.shape)
-
+    def backprop_delta(self, delta):
         '''Each feature map is the result of all previous layer maps,
         therefore the same gradient has to be spread for each'''
         return np.sum([
             [[convolve2d(k[::-1, ::-1], d) for k in kernel_set]
              for d, kernel_set in zip(sample_delta, self.kernels)]
-            for sample_delta in self.delta], axis=1)
+            for sample_delta in delta], axis=1)
 
     def get_param_grad(self):
         return (np.array(
@@ -124,15 +122,12 @@ class max_pool(lm.AbstractLayer):
         i = np.indices(self.switch.shape)
         return x_col[i[0], i[1], i[2], i[3], self.switch]
 
-    def backprop_delta(self, target):
-        self.delta = self.next.backprop_delta(target)\
-                              .reshape(self.output.shape)
-
+    def backprop_delta(self, delta):
         batch, N, h, w = self.prev.output.shape
         n, m = self.pool_shape
         res = np.zeros((batch, N, h/n, w/m, n*m))
         i = np.indices(self.switch.shape)
-        res[i[0], i[1], i[2], i[3], self.switch] = self.delta
+        res[i[0], i[1], i[2], i[3], self.switch] = delta
 
         return res.reshape(batch, N, h/n, w/m, n, m)\
                   .transpose(0, 1, 2, 4, 3, 5)\
