@@ -34,7 +34,7 @@ def loadmnist():
     test_hot = np.zeros((test_label.size, test_label.max() + 1))
     test_hot[np.arange(test_label.size), test_label] = 1
 
-loadmnist()
+# loadmnist()
 
 print 'constructing network'
 #########################
@@ -43,8 +43,11 @@ nn = nm.network(in_shape=train_data[0].shape, criterion='MSE')
 nn.add_conv(3, (5, 5))
 nn.add_maxpool(pool_shape=(2, 2))
 nn.add_activation('tanh')
+nn.add_conv(3, (5, 5))
+nn.add_maxpool(pool_shape=(2, 2))
+nn.add_activation('tanh')
 
-# nn.add_full(150)
+nn.add_full(150)
 nn.add_shaper(np.prod(nn[-1].shape))
 nn.add_full(10)
 #########################
@@ -118,4 +121,5 @@ def __main__():
 if __name__ == '__main__':
     main()
 
-test = nn.grad_ascent(3, train_data[0:100])
+test = nn.grad_ascent(6, train_data[0:100])
+imshow(test[0:5])
