@@ -190,7 +190,7 @@ class network(object):
                 self.get_output(input_set[b::num_of_batches])
 
                 'BACKWARD'
-                self.input.backprop_delta(target_set[b::num_of_batches])
+                self.input.backprop(target_set[b::num_of_batches])
 
                 'PARAMETER GRADIENT ACCUMULATION'
                 for l in self.layerlist:
@@ -248,10 +248,11 @@ class network(object):
         l = self[layer_ind]
         oh = self.get_one_hot(layer_ind)
         oh = np.broadcast_to(oh, ((top,) + oh.shape)).reshape(-1, *l.shape)
-
+        store = l.get_delta
         l.get_delta = lambda(x): oh
-  
-        return self.input.backprop(None)
+        res = self.input.backprop(None)
+        l.get_delta = store
+        return res
 
     def grad_ascent(self, layer_ind, activation_set, top=9):
         """get current layer's each neuron's strongest corresponding inputs'

@@ -13,7 +13,7 @@ def loadmnist():
     global test_hot
     print 'Loading data from MNIST'
     mndata = MNIST('./MNIST_data')
-    train_size = 60000
+    train_size = 1000
     test_size = 1000
     img, lbl = mndata.load_training()
 
@@ -34,7 +34,7 @@ def loadmnist():
     test_hot = np.zeros((test_label.size, test_label.max() + 1))
     test_hot[np.arange(test_label.size), test_label] = 1
 
-# loadmnist()
+loadmnist()
 
 print 'constructing network'
 #########################
@@ -43,12 +43,12 @@ nn = nm.network(in_shape=train_data[0].shape, criterion='MSE')
 nn.add_conv(3, (5, 5))
 nn.add_maxpool(pool_shape=(2, 2))
 nn.add_activation('tanh')
-nn.add_conv(3, (5, 5))
+nn.add_conv(10, (5, 5))
 nn.add_maxpool(pool_shape=(2, 2))
 nn.add_activation('tanh')
+nn.add_shaper(np.prod(nn[-1].shape))
 
 nn.add_full(150)
-nn.add_shaper(np.prod(nn[-1].shape))
 nn.add_full(10)
 #########################
 print nn
@@ -98,10 +98,11 @@ def imshow(im):
     
 def onebatch():
     nn.get_output(train_data[0:10])
-    nn.input.backprop_delta(train_hot[0:10])
-    nn[1].SGDtrain(0.05)
-    nn[4].SGDtrain(0.05)
-    nn[7].SGDtrain(0.05)
+    nn.input.backprop(train_hot[0:10])
+    nn[1].SGDtrain(0.005)
+    nn[4].SGDtrain(0.005)
+    nn[8].SGDtrain(0.005)
+    nn[9].SGDtrain(0.005)
     return nn.test_eval((train_data[0:10], train_hot[0:10]))
     
     
@@ -110,16 +111,18 @@ def onebatch():
 # im = zip(test_data[0:3], test, nn[1].backprop_delta(test))
 # imshow(im[2])
 
-# nn.SGD(train_policy=nn.fix_epoch, training_set=(train_data, train_hot),
-#        batch=16, rate=0.005, epoch_call_back=print_test, epoch=10)
+nn.SGD(train_policy=nn.fix_epoch, training_set=(train_data, train_hot),
+       batch=16, rate=0.005, epoch_call_back=print_test, epoch=10)
 
 # print_csv('./test_runs/{}-rate005'.format(name), result)
+
+def visualise_layer():
+    test = nn.grad_ascent(4, train_data[0:100]).reshape(9, 10, 28, 28)
+    imshow(test[0:3])
 
 def __main__():
     loadmnist()
 
 if __name__ == '__main__':
     main()
-
-test = nn.grad_ascent(6, train_data[0:100])
-imshow(test[0:5])
+    

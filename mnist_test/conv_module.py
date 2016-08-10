@@ -57,7 +57,7 @@ class Conv(lm.AbstractLayer):
         return np.sum([
             [[convolve2d(k[::-1, ::-1], d) for k in kernel_set]
              for d, kernel_set in zip(sample_delta, self.kernels)]
-            for sample_delta in delta], axis=1)
+            for sample_delta in delta], axis=2)
 
     def get_param_grad(self):
         return (np.array(

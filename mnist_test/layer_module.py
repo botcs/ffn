@@ -58,6 +58,8 @@ class AbstractLayer:
             self.delta = self.next.backprop(target)
             return self.delta
 
+        return target
+
     def backprop_delta(self, delta):
         pass
 
@@ -195,11 +197,10 @@ class shaper(AbstractLayer):
         should be flattened in all axes, but the first one.
 
         """
-        self.b_size = (input.shape[0],)
-        return input.reshape(self.b_size + self.shape)
+        return input.reshape(-1, *self.shape)
 
     def backprop_delta(self, delta):
-        return delta.reshape(self.b_size + self.prev.shape)
+        return delta.reshape(-1, *self.prev.shape)
 
 
 class input(activation):
