@@ -190,7 +190,7 @@ class network(object):
                 self.get_output(input_set[b::num_of_batches])
 
                 'BACKWARD'
-                self.input.backprop_delta(target_set[b::num_of_batches])
+                self.input.backprop(target_set[b::num_of_batches])
 
                 'PARAMETER GRADIENT ACCUMULATION'
                 for l in self.layerlist:
@@ -219,3 +219,74 @@ class network(object):
             return prev_hit < self.last_hit
         except AttributeError:
             self.last_hit = self.test_eval(validation_set)
+
+    'VISUALISATION'
+    def max_act(self, layer_ind, activation_set, top=1):
+        l = self[layer_ind]
+        res = l.get_output(activation_set)
+        return res.argsort(axis=0)[-top:]
+
+    def get_one_hot(self, layer_ind):
+        '''get one-hot matrixes for each neuron in layer to prop back'''
+        l = self[layer_ind]
+        # number of neurons
+        nn = np.prod(l.shape)
+        # each neuron should have its own one-hot matrix so:
+        # nn^2 zeros should do
+        oh = np.zeros(nn ** 2)
+        # change 1 to simulate the ideal activation for that neuron
+        # move this 1's index by nn + 1 to do so
+        oh[::nn + 1] = 1
+
+        # return the well shaped form of one-hots
+        return oh.reshape(l.shape + l.shape)
+
+    def backprop_one_hot(self, layer_ind, top=1):
+        'Should be called after forwarding each neurons most intense input'
+        # broadcast stands for multiple top activation for each neuron
+
+        l = self[layer_ind]
+        oh = self.get_one_hot(layer_ind)
+        oh = np.broadcast_to(oh, ((top,) + oh.shape)).reshape(-1, *l.shape)
+        store = l.get_delta
+        l.get_delta = lambda(x): oh
+        res = self.input.backprop(None)
+        l.get_delta = store
+        return res
+
+    def grad_ascent(self, layer_ind, activation_set, top=9, epoch=5, rate=0.1):
+        """get current layer's each neuron's strongest corresponding inputs'
+        index in activation set
+
+        Example:
+        if layer's output is 10*24*24 for a sample, then the returned
+        indices will be shaped 9*10*24*24, where the [:,3,10,10]
+        reveals the index of the top 9 image (from the activation_set)
+        that causes the maximum activation at output's 3rd feature
+        map's [10:10] located neuron
+
+        """
+
+        ind = self.max_act(layer_ind, activation_set, top)
+
+        """retrieve those images from the activation_set, and forward them
+        again
+
+        Example:
+        get (9, 3, 24, 24, 1, 28, 28) shaped image set, where
+        (9, 3, 24, 24, ...) is described in the previous comment,
+        and for each entry there are (..., 1, 28, 28) one channeled,
+        28x28 image"""
+        input = activation_set[ind].reshape(-1, *self.input.shape)
+
+        """for correct batch inference it should be reshaped to (-1, 1, 28, 28)
+        where '-1' stands for implicitly 9*3*24*24 (all that remains)
+        """
+        
+        l = self[layer_ind]
+        for e in xrange(epoch):
+            l.get_output(input)
+            delta = self.backprop_one_hot(layer_ind, top).reshape(input.shape)
+            input += rate * delta
+
+        return input

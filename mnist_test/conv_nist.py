@@ -40,15 +40,15 @@ print 'constructing network'
 #########################
 # NETWORK DEFINITION
 nn = nm.network(in_shape=train_data[0].shape, criterion='softmax')
-nn.add_conv(10, (5, 5))
-nn.add_maxpool(pool_shape=(2, 2))
-nn.add_activation('tanh')
-nn.add_conv(3, (3, 3))
+# nn.add_conv(10, (5, 5))
 # nn.add_maxpool(pool_shape=(2, 2))
-nn.add_activation('tanh')
+# nn.add_activation('tanh')
+# nn.add_conv(3, (3, 3))
+# # nn.add_maxpool(pool_shape=(2, 2))
+# nn.add_activation('tanh')
 nn.add_shaper(np.prod(nn[-1].shape))
 
-nn.add_full(100)
+nn.add_full(150)
 nn.add_activation('tanh')
 
 nn.add_full(10)
@@ -81,49 +81,43 @@ def print_test():
                    nn.test_eval((test_data, test_hot))))
 
 
-def imshow(im):
+def imshow(im, cmap='Greys_r', interpol='None'):
     import matplotlib.pyplot as plt
     if len(im.shape) == 3:
         for i, x in enumerate(im, 1):
             plt.subplot(1, len(im), i)
-            plt.imshow(x.squeeze(), cmap='Greys_r')
+            plt.imshow(x.squeeze(), cmap=cmap, interpolation=interpol)
             plt.gca().xaxis.set_major_locator(plt.NullLocator())
     if len(im.shape) == 4:
         for irow, xrow in enumerate(im, 0):
             for icol, x in enumerate(xrow, 1):
                 print '\r  ', len(im), len(xrow), irow * len(xrow) + icol
                 plt.subplot(len(im), len(xrow), irow * len(xrow) + icol)
-                plt.imshow(x.squeeze(), cmap='Greys_r', interpolation='None')
+                plt.imshow(x.squeeze(), cmap=cmap, interpolation=interpol)
                 plt.gca().xaxis.set_major_locator(plt.NullLocator())
     plt.show()
     return im.shape
 
-    
-def onebatch():
-    nn.get_output(train_data[0:10])
-    nn.input.backprop(train_hot[0:10])
-    nn[1].SGDtrain(0.005)
-    nn[4].SGDtrain(0.005)
-    nn[8].SGDtrain(0.005)
-    nn[9].SGDtrain(0.005)
-    return nn.test_eval((train_data[0:10], train_hot[0:10]))
-    
-    
 # imshow(nn.get_output(test_data[0]))
 # test = nn.get_output(test_data[0:3]) * 100
 # im = zip(test_data[0:3], test, nn[1].backprop_delta(test))
 # imshow(im[2])
 
 nn.SGD(train_policy=nn.fix_epoch, training_set=(train_data, train_hot),
-       batch=16, rate=0.005, epoch_call_back=print_test, epoch=3)
+       batch=16, rate=0.05, epoch_call_back=print_test, epoch=3)
+
+
+def print_result():
+    plt.show(plt.plot(result))
 
 # print_csv('./test_runs/{}-rate005'.format(name), result)
 
 
-def visualise_layer(lay_ind=4, top=9):
-    test = nn.grad_ascent(lay_ind, train_data[0:100], top)\
+def visualise_layer(lay_ind=4, top=9, iterations=10):
+    test = nn.grad_ascent(lay_ind, test_data, top, iterations)\
              .reshape((top,) + nn[lay_ind].shape + (28, 28))
     return test
+
 
 def max_act(lay_ind, top=9):
     return test_data[nn.max_act(lay_ind, test_data, top)].squeeze()

@@ -254,7 +254,7 @@ class network(object):
         l.get_delta = store
         return res
 
-    def grad_ascent(self, layer_ind, activation_set, top=9):
+    def grad_ascent(self, layer_ind, activation_set, top=9, epoch=5, rate=0.1):
         """get current layer's each neuron's strongest corresponding inputs'
         index in activation set
 
@@ -284,5 +284,9 @@ class network(object):
         """
         
         l = self[layer_ind]
-        l.get_output(input)
-        return self.backprop_one_hot(layer_ind, top)
+        for e in xrange(epoch):
+            l.get_output(input)
+            delta = self.backprop_one_hot(layer_ind, top).reshape(input.shape)
+            input += rate * delta
+
+        return input
