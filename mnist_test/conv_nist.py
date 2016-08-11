@@ -13,7 +13,7 @@ def loadmnist():
     global test_hot
     print 'Loading data from MNIST'
     mndata = MNIST('./MNIST_data')
-    train_size = 1000
+    train_size = 10000
     test_size = 1000
     img, lbl = mndata.load_training()
 
@@ -39,16 +39,18 @@ loadmnist()
 print 'constructing network'
 #########################
 # NETWORK DEFINITION
-nn = nm.network(in_shape=train_data[0].shape, criterion='MSE')
-nn.add_conv(3, (5, 5))
-nn.add_maxpool(pool_shape=(2, 2))
-nn.add_activation('tanh')
+nn = nm.network(in_shape=train_data[0].shape, criterion='softmax')
 nn.add_conv(10, (5, 5))
 nn.add_maxpool(pool_shape=(2, 2))
 nn.add_activation('tanh')
+nn.add_conv(3, (3, 3))
+# nn.add_maxpool(pool_shape=(2, 2))
+nn.add_activation('tanh')
 nn.add_shaper(np.prod(nn[-1].shape))
 
-nn.add_full(150)
+nn.add_full(100)
+nn.add_activation('tanh')
+
 nn.add_full(10)
 #########################
 print nn
@@ -94,6 +96,7 @@ def imshow(im):
                 plt.imshow(x.squeeze(), cmap='Greys_r', interpolation='None')
                 plt.gca().xaxis.set_major_locator(plt.NullLocator())
     plt.show()
+    return im.shape
 
     
 def onebatch():
@@ -112,13 +115,19 @@ def onebatch():
 # imshow(im[2])
 
 nn.SGD(train_policy=nn.fix_epoch, training_set=(train_data, train_hot),
-       batch=16, rate=0.005, epoch_call_back=print_test, epoch=10)
+       batch=16, rate=0.005, epoch_call_back=print_test, epoch=3)
 
 # print_csv('./test_runs/{}-rate005'.format(name), result)
 
-def visualise_layer():
-    test = nn.grad_ascent(4, train_data[0:100]).reshape(9, 10, 28, 28)
-    imshow(test[0:3])
+
+def visualise_layer(lay_ind=4, top=9):
+    test = nn.grad_ascent(lay_ind, train_data[0:100], top)\
+             .reshape((top,) + nn[lay_ind].shape + (28, 28))
+    return test
+
+def max_act(lay_ind, top=9):
+    return test_data[nn.max_act(lay_ind, test_data, top)].squeeze()
+    
 
 def __main__():
     loadmnist()

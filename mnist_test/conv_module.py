@@ -55,8 +55,9 @@ class Conv(lm.AbstractLayer):
         '''Each feature map is the result of all previous layer maps,
         therefore the same gradient has to be spread for each'''
         return np.sum([
-            [[convolve2d(k[::-1, ::-1], d) for k in kernel_set]
-             for d, kernel_set in zip(sample_delta, self.kernels)]
+            [[convolve2d(k[::-1, ::-1], d)
+              for d, k in zip(sample_delta, kernel_set)]
+             for kernel_set in self.kernels]
             for sample_delta in delta], axis=2)
 
     def get_param_grad(self):
