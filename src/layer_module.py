@@ -53,8 +53,18 @@ class AbstractLayer:
         self.output = self.get_local_output(prop_in)
         return self.output
 
-    def backprop_delta(self, next):
+    def get_delta(self, target):
+        if self.next:
+            self.delta = self.next.backprop(target)
+            return self.delta
+
+        return target
+
+    def backprop_delta(self, delta):
         pass
+
+    def backprop(self, target):
+        return self.backprop_delta(self.get_delta(target))
 
     def train(self, rate):
         pass
@@ -90,13 +100,12 @@ class fully_connected(AbstractLayer):
             self.input = np.expand_dims(input, 0)
         else:
             self.input = input
-            
+
         return np.dot(self.input, self.weights.T) + self.bias
 
-    def backprop_delta(self, target):
+    def backprop_delta(self, delta):
         assert self.next, 'Missing next layer, delta cannot be evaluated'
-        self.delta = self.next.backprop_delta(target)
-        return np.dot(self.delta, self.weights)
+        return np.dot(delta, self.weights)
 
     def get_param_grad(self):
         'weight and bias gradient'
@@ -163,9 +172,8 @@ class activation(AbstractLayer):
         self.input = input
         return self.act(input)
 
-    def backprop_delta(self, target):
-        self.delta = self.next.backprop_delta(target)
-        return self.der(self.input) * self.delta
+    def backprop_delta(self, delta):
+        return self.der(self.input) * delta
 
 
 class shaper(AbstractLayer):
@@ -189,14 +197,12 @@ class shaper(AbstractLayer):
         should be flattened in all axes, but the first one.
 
         """
-        self.b_size = (input.shape[0],)
-        return input.reshape(self.b_size + self.shape)
+        return input.reshape(-1, *self.shape)
 
-    def backprop_delta(self, target):
-        return self.next.backprop_delta(target)\
-                   .reshape(self.b_size + self.prev.shape)
+    def backprop_delta(self, delta):
+        return delta.reshape(-1, *self.prev.shape)
 
-    
+
 class input(activation):
 
     def __init__(self, shape, **kwargs):
@@ -263,11 +269,11 @@ class output(activation):
         self.get_output(input)
         return output.crit[self.type]((self.output, target))
 
-    def backprop_delta(self, target):
+    def backprop_delta(self, delta):
         '''The delta of the output layer wouldn't be used for training
         so the function returns directly the delta of the previous layer
         '''
-        self.prev_delta = output.derivative[self.type]((self.output, target))
+        self.prev_delta = output.derivative[self.type]((self.output, delta))
         return self.prev_delta
 
 
@@ -279,12 +285,12 @@ class dropout(activation):
         self.p = p
 
     def get_local_output(self, input):
-        self.curr_drop = np.random.rand(input.size) > self.p
-        return input * self.curr_drop
+        self.curr_drop = np.random.rand(*input.shape) > self.p
+        # divide by p for keeping the next layer unsaturated
+        return input * self.curr_drop / self.p
 
-    def backprop_delta(self, target):
-        self.delta = self.next.backprop_delta(target).reshape(self.shape)
-        return self.curr_drop * self.delta
+    def backprop_delta(self, delta):
+        return self.curr_drop * delta
 
 
 class dropcon(fully_connected):
@@ -295,11 +301,9 @@ class dropcon(fully_connected):
         self.p = p
 
     def get_local_output(self, input):
-        self.curr_drop = np.random.random(self.weights.shape) > self.p
+        self.curr_drop = np.random.rand(*self.weights.shape) > self.p
         self.input = input
         return np.dot((self.curr_drop * self.weights), input)
 
-    def backprop_delta(self, target):
-        if self.next:
-            self.delta = self.next.backprop_delta(target).reshape(self.delta)
-        return np.dot(self.delta, self.curr_drop * self.weights)
+    def backprop_delta(self, delta):
+        return np.dot(delta, self.curr_drop * self.weights)

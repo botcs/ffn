@@ -1,7 +1,7 @@
 import layer_module as lm
 import conv_module as cm
 import numpy as np
-import cPickle
+import dill
 from utilities import StatusBar, ensure_dir
 
 
@@ -66,64 +66,12 @@ class network(object):
             lm.shaper(shape, prev=self.top, **kwargs))
         return self
 
-    '''Network supervised training'''
-    def train(self, input_set, target_set, epoch, rate, **kwargs):
-        'setting utilities'
-        bar = StatusBar(epoch)
-        cp_name = kwargs.get('checkpoint')
-
-        'For eliminating native lists, and tuples'
-        input_set = np.array(input_set)
-        target_set = np.array(target_set)
-
-        result = []
-        for e in xrange(epoch):
-            '''
-            calculating criterion yields the FORWARD propagation
-            calling the input's "backprop_delta" yields BACKWARD propagation
-
-            During one epoch the crit of the network is averaged
-            and updated in the status bar.
-
-            No batch training is used here, meaning, that:
-            the network's weights are updated after each FORWARD-BACKWARD cycle
-            '''
-            crit = 0
-            for input, target in zip(input_set, target_set):
-                'FORWARD'
-                crit += self.output.get_crit(input, target)
-
-                'BACKWARD'
-                self.input.backprop_delta(target)
-
-                curr = self.output
-                while curr.prev is not None:
-                    'iterating over layers to train them, if trainable'
-                    curr = curr.prev
-                    curr.train(rate)
-                    '''i.e. activation layers cannot be trained because they
-                       doesn't hold any changeable parameters'''
-
-            crit /= len(input_set)
-            result.append((crit, self.test_eval(kwargs.get("test_set"))))
-            bar.update(crit)
-            'Saving checkpoints during training is useful'
-            if cp_name and (e + 1) % (epoch / 2) == 0:
-                'By default it is done at half, and the end of the training'
-                file_name = str(cp_name)
-                file_name += '-e{}-ID'.format(e + 1)
-                file_name += str(id(self)) + '.dat'
-                self.save_state(file_name)
-        if cp_name:
-            print("Saved checkpoint to: '" + file_name + "'")
-        return result
-
     def save_state(self, file_name):
         ensure_dir(file_name)
         if file_name:
-            cPickle.dump(self, open(file_name, 'wb'))
+            dill.dump(self, open(file_name, 'wb'))
         else:
-            cPickle.dump(self, open(str(id(self)) + '.dat', 'wb'))
+            dill.dump(self, open(str(id(self)) + '.net', 'wb'))
 
     def __str__(self):
         res = 'Network ID: ' + str(id(self))
@@ -138,8 +86,7 @@ class network(object):
         res += '\n' + '-' * 30
         return res
 
-    @classmethod
-    def load(cls, load):
+    def load(self, load):
         return cPickle.load(open(load, 'rb'))
 
     def __init__(self, in_shape, criterion, **kwargs):

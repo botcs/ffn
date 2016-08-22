@@ -2,3 +2,5 @@
 *.pyc
 *~
 /mnist_test/test_runs
+.net
+.res
